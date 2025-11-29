@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verification Success - ERepair</title>
+    <link rel="icon" type="image/png" id="favicon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>">
+    <link href="../assets/css/tailwind.css" rel="stylesheet">
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .success-gradient {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .celebration-animation {
+            animation: celebration 2s ease-in-out infinite;
+        }
+        @keyframes celebration {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            75% { transform: scale(1.1) rotate(5deg); }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f59e0b;
+            animation: confetti-fall 3s linear infinite;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen overflow-hidden">
+    <!-- Confetti Animation -->
+    <div class="fixed inset-0 pointer-events-none z-10">
+        <div class="confetti" style="left: 10%; animation-delay: 0s;"></div>
+        <div class="confetti" style="left: 20%; animation-delay: 0.5s; background: #ef4444;"></div>
+        <div class="confetti" style="left: 30%; animation-delay: 1s; background: #3b82f6;"></div>
+        <div class="confetti" style="left: 40%; animation-delay: 1.5s; background: #8b5cf6;"></div>
+        <div class="confetti" style="left: 50%; animation-delay: 2s; background: #10b981;"></div>
+        <div class="confetti" style="left: 60%; animation-delay: 0.3s; background: #f59e0b;"></div>
+        <div class="confetti" style="left: 70%; animation-delay: 0.8s; background: #ef4444;"></div>
+        <div class="confetti" style="left: 80%; animation-delay: 1.3s; background: #3b82f6;"></div>
+        <div class="confetti" style="left: 90%; animation-delay: 1.8s; background: #8b5cf6;"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm relative z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="../auth/index.php" class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-indigo-600">
+                            <i class="fas fa-tools mr-2"></i>ERepair
+                        </h1>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="../auth/index.php" class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        Home
+                    </a>
+                    <a href="../auth/index.php" class="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative z-10">
+        <div class="max-w-4xl w-full">
+            <!-- Success Card -->
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+                <!-- Header -->
+                <div class="success-gradient px-8 py-12 text-center relative">
+                    <div class="celebration-animation inline-block mb-6">
+                        <div class="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto shadow-lg">
+                            <svg class="w-20 h-20 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22,4 12,14.01 9,11.01"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <h1 class="text-5xl font-bold text-white mb-4">Welcome to ERepair!</h1>
+                    <p class="text-xl text-green-100 mb-2">Your email has been successfully verified</p>
+                    <p class="text-lg text-green-200">You're all set to start using our services</p>
+                </div>
+
+                <!-- Content -->
+                <div class="px-8 py-12">
+                    <!-- Account Status -->
+                    <div class="text-center mb-8">
+                        <div class="inline-flex items-center bg-green-100 text-green-800 px-6 py-3 rounded-full text-lg font-semibold">
+                            <i class="fas fa-check-circle mr-3"></i>
+                            Account Verified & Active
+                        </div>
+                    </div>
+
+                    <!-- Next Steps -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <!-- For Customers -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-user text-blue-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-blue-900">For Customers</h3>
+                            </div>
+                            <ul class="space-y-3 text-blue-800">
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    Book repair appointments
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    Track repair progress
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    View repair history
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    Rate and review services
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- For Shop Owners -->
+                        <div class="bg-purple-50 border border-purple-200 rounded-xl p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                                    <i class="fas fa-store text-purple-600 text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-semibold text-purple-900">For Shop Owners</h3>
+                            </div>
+                            <ul class="space-y-3 text-purple-800">
+                                <li class="flex items-center">
+                                    <i class="fas fa-clock text-yellow-500 mr-3"></i>
+                                    Account pending admin approval
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    Manage customer bookings
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    Update repair status
+                                </li>
+                                <li class="flex items-center">
+                                    <i class="fas fa-check text-green-500 mr-3"></i>
+                                    View shop analytics
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="text-center space-y-4">
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                            <a href="../auth/index.php" class="bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-all transform hover:scale-105 shadow-lg">
+                                <i class="fas fa-sign-in-alt mr-3"></i>
+                                Login to Your Account
+                            </a>
+                            <a href="../auth/index.php" class="border-2 border-indigo-600 text-indigo-600 px-8 py-4 rounded-xl font-semibold text-lg hover:bg-indigo-50 transition-all transform hover:scale-105">
+                                <i class="fas fa-home mr-3"></i>
+                                Back to Home
+                            </a>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mt-6">
+                            Need help? Contact us at 
+                            <a href="mailto:support@erepair.com" class="text-indigo-600 hover:text-indigo-800 font-medium">support@erepair.com</a>
+                            or call <span class="font-medium">+1 (555) 123-4567</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Preview -->
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-calendar-check text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Easy Booking</h3>
+                    <p class="text-gray-600 text-sm">Book repair appointments in just a few clicks</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-shield-alt text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Verified Shops</h3>
+                    <p class="text-gray-600 text-sm">All repair shops are verified and rated</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-sync-alt text-blue-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Real-Time Updates</h3>
+                    <p class="text-gray-600 text-sm">Get instant notifications about your repairs</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-redirect after 10 seconds (optional)
+        setTimeout(() => {
+            // Uncomment the line below to enable auto-redirect
+            // window.location.href = 'login.html';
+        }, 10000);
+    </script>
+    <script>
+        // Fetch and set website logo as favicon
+        (function() {
+            fetch('../../backend/api/get-website-logo.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.logo_url) {
+                        let logoUrl = data.logo_url;
+                        
+                        // Normalize the URL for this page (frontend/verification/)
+                        if (!logoUrl.startsWith('http://') && !logoUrl.startsWith('https://')) {
+                            if (logoUrl.startsWith('../backend/')) {
+                                // Path is relative to frontend/, already correct for verification/
+                                // Just keep as is
+                            } else if (logoUrl.startsWith('backend/')) {
+                                logoUrl = '../' + logoUrl;
+                            } else if (!logoUrl.startsWith('../') && !logoUrl.startsWith('/')) {
+                                logoUrl = '../../backend/uploads/logos/' + logoUrl.split('/').pop();
+                            }
+                        }
+                        
+                        const favicon = document.getElementById('favicon');
+                        if (favicon) {
+                            favicon.href = logoUrl;
+                            console.log('Verification Success page: Favicon updated to:', logoUrl);
+                        }
+                        
+                        let appleIcon = document.querySelector("link[rel='apple-touch-icon']");
+                        if (!appleIcon) {
+                            appleIcon = document.createElement('link');
+                            appleIcon.rel = 'apple-touch-icon';
+                            document.head.appendChild(appleIcon);
+                        }
+                        appleIcon.href = logoUrl;
+                    }
+                })
+                .catch(err => console.error('Error loading website logo:', err));
+        })();
+    </script>
+</body>
+</html>

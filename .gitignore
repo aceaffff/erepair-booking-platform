@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+vendor/
+composer.lock
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+error_log
+
+# Uploads (keep structure but ignore files)
+backend/uploads/customers/*
+backend/uploads/shop_owners/*
+backend/uploads/logos/*
+frontend/uploads/avatars/*
+frontend/uploads/device_photos/*
+frontend/uploads/shop_items/*
+!backend/uploads/customers/.gitkeep
+!backend/uploads/shop_owners/.gitkeep
+!backend/uploads/logos/.gitkeep
+!frontend/uploads/avatars/.gitkeep
+!frontend/uploads/device_photos/.gitkeep
+!frontend/uploads/shop_items/.gitkeep
+
+# Database
+*.sql
+*.db
+*.sqlite
+
+# Configuration (sensitive)
+backend/config/api_keys.php
+backend/config/database.php
+backend/config/email.php
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build files
+dist/
+build/
+

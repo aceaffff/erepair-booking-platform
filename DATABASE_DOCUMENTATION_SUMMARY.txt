@@ -1,0 +1,378 @@
+================================================================================
+EREPAIR DATABASE SCHEMA - DOCUMENTATION SUMMARY
+================================================================================
+
+Created: November 21, 2024
+Based on: Backend Process Analysis
+Database: MySQL 5.7+ / MariaDB 10.2+
+
+================================================================================
+FILES CREATED
+================================================================================
+
+1. docs/DATABASE_SCHEMA.md (Main Documentation)
+   - Complete schema reference for all 17 tables
+   - Detailed column descriptions
+   - Foreign key relationships
+   - Business process flows
+   - Indexes and performance notes
+   - Security features
+   - Maintenance guidelines
+   Size: ~65KB | Lines: 1200+
+
+2. docs/DATABASE_ER_DIAGRAM.md (Visual Diagrams)
+   - Mermaid ER diagram (GitHub-renderable)
+   - Relationship summaries
+   - Cascade delete visualizations
+   - Data flow diagrams
+   - Sample queries
+   Size: ~35KB | Lines: 700+
+
+3. docs/DATABASE_QUICK_REFERENCE.md (Developer Guide)
+   - Quick table index
+   - Copy-paste ready queries
+   - Enum values reference
+   - Common patterns
+   - Troubleshooting guide
+   Size: ~30KB | Lines: 650+
+
+4. backend/schema_complete.sql (Complete SQL Schema)
+   - Ready-to-run SQL file
+   - All table definitions
+   - Default admin user
+   - Stored procedures
+   - Maintenance views
+   - Automated cleanup events
+   Size: ~20KB | Lines: 550+
+
+5. docs/README_DATABASE.md (Navigation Guide)
+   - Documentation overview
+   - Getting started guide
+   - Common tasks
+   - Checklist
+   Size: ~15KB | Lines: 400+
+
+================================================================================
+DATABASE OVERVIEW
+================================================================================
+
+Total Tables: 17
+Character Set: UTF8MB4 (full Unicode support)
+Engine: InnoDB (with foreign key constraints)
+
+CORE TABLES (4):
+  1. users                 - All user accounts (customer/shop_owner/technician/admin)
+  2. sessions              - Token-based authentication
+  3. email_verifications   - Email verification codes (6-digit, 5-min expiry)
+  4. password_resets       - Password reset codes (6-digit, 15-min expiry)
+
+SHOP & BUSINESS (2):
+  5. shop_owners           - Shop owner profiles with business documents
+  6. repair_shops          - Physical shop locations
+
+TECHNICIAN (2):
+  7. technicians           - Technician profiles
+  8. technician_skills     - Skills per technician (beginner/intermediate/advanced/expert)
+
+SERVICES (2):
+  9. services              - Services offered by shops
+ 10. shop_services         - Alternative service table (legacy)
+
+BOOKING (2):
+ 11. bookings              - Main repair booking/job records
+ 12. booking_history       - Audit trail of status changes
+
+REVIEW & RATING (3):
+ 13. reviews               - Customer reviews (1-5 stars)
+ 14. shop_ratings          - Aggregated shop ratings
+ 15. technician_ratings    - Aggregated technician ratings
+
+NOTIFICATION (1):
+ 16. notifications         - In-app notification system
+
+E-COMMERCE (1):
+ 17. shop_items            - Products/parts sold by shops
+
+================================================================================
+KEY FEATURES
+================================================================================
+
+USER MANAGEMENT:
+  ✓ 4 user roles (customer, shop_owner, technician, admin)
+  ✓ Email verification required
+  ✓ Password reset functionality
+  ✓ Admin approval for shop owners
+  ✓ Location tracking (latitude/longitude)
+
+BOOKING WORKFLOW (10 stages):
+  1. pending_review                    (customer submits)
+  2. awaiting_customer_confirmation    (shop provides estimate)
+  3. confirmed_by_customer             (customer accepts)
+  4. approved                          (shop approves)
+  5. assigned                          (technician assigned)
+  6. in_progress                       (work in progress)
+  7. completed                         (work done)
+  8. cancelled_by_customer             (customer cancels)
+  9. rejected                          (shop rejects)
+ 10. cancelled                         (generic cancel)
+
+REVIEW SYSTEM:
+  ✓ One review per booking (unique constraint)
+  ✓ 1-5 star ratings
+  ✓ Rates both shop and technician
+  ✓ Automatic aggregate calculation
+  ✓ Only completed bookings can be reviewed
+
+SECURITY:
+  ✓ Bcrypt password hashing (PASSWORD_DEFAULT)
+  ✓ Token-based authentication (64-char hex)
+  ✓ Session expiration (7 days)
+  ✓ Prepared statements (SQL injection prevention)
+  ✓ Input validation
+  ✓ Document verification for shop owners
+
+================================================================================
+BUSINESS PROCESSES DOCUMENTED
+================================================================================
+
+1. CUSTOMER REGISTRATION
+   Customer registers → Email verification → Email verified → Can book
+
+2. SHOP OWNER REGISTRATION
+   Owner registers with docs → AI validation (optional) → Admin reviews
+   → Approved/Rejected → If approved: can create shops & services
+
+3. BOOKING FLOW
+   Customer creates booking → Shop reviews & provides estimate
+   → Customer confirms → Shop assigns technician → Work progresses
+   → Completed → Customer reviews
+
+4. REVIEW SUBMISSION
+   Booking completed → Customer submits review → Updates shop_ratings
+   → Updates technician_ratings → Displays on profiles
+
+5. TECHNICIAN MANAGEMENT
+   Shop owner creates technician account → Adds skills
+   → Assigns to bookings → Tracks performance
+
+================================================================================
+RELATIONSHIPS & CONSTRAINTS
+================================================================================
+
+CASCADE DELETES:
+  users deleted → deletes sessions, verifications, bookings, reviews, etc.
+  shop_owners deleted → deletes shops, technicians, items
+  repair_shops deleted → deletes services, bookings
+  bookings deleted → deletes history, reviews
+
+SET NULL:
+  services deleted → booking.service_id = NULL (booking preserved)
+  technicians deleted → booking.technician_id = NULL (booking preserved)
+
+UNIQUE CONSTRAINTS:
+  ✓ users.email (one account per email)
+  ✓ sessions.token (unique session tokens)
+  ✓ reviews.booking_id (one review per booking)
+  ✓ shop_ratings.shop_id (one rating record per shop)
+  ✓ technician_ratings.technician_id (one rating record per technician)
+
+================================================================================
+PERFORMANCE OPTIMIZATIONS
+================================================================================
+
+INDEXES CREATED:
+  ✓ All foreign keys (automatic)
+  ✓ users.email (login lookups)
+  ✓ sessions.token (session validation)
+  ✓ bookings (customer_id, status) - customer dashboard
+  ✓ bookings (shop_id, scheduled_at) - shop calendar
+  ✓ Location coordinates (latitude, longitude) - geo search
+  ✓ shop_ratings.average_rating - sorting
+  ✓ technician_ratings.average_rating - sorting
+  ✓ notifications (user_id, is_read) - badge counts
+
+STORED PROCEDURES:
+  ✓ update_shop_ratings(shop_id) - recalculate shop ratings
+  ✓ update_technician_ratings(technician_id) - recalculate tech ratings
+  ✓ cleanup_expired_records() - remove expired sessions/codes
+
+AUTOMATED EVENTS:
+  ✓ Daily cleanup event (event_daily_cleanup)
+
+VIEWS:
+  ✓ view_active_bookings - current active bookings
+  ✓ view_shop_performance - shop metrics
+  ✓ view_pending_approvals - admin approval queue
+
+================================================================================
+FILE UPLOAD PATHS
+================================================================================
+
+  backend/uploads/shop_owners/     - ID documents, business permits
+  backend/uploads/logos/           - Shop logos
+  frontend/uploads/avatars/        - User profile photos
+  frontend/uploads/device_photos/  - Booking device photos
+  frontend/uploads/shop_items/     - Product images
+
+================================================================================
+DEFAULT CREDENTIALS
+================================================================================
+
+  Email: admin@repair.com
+  Password: admin123
+  
+  ⚠️  IMPORTANT: Change immediately in production!
+
+================================================================================
+SETUP INSTRUCTIONS
+================================================================================
+
+OPTION 1 - Fresh Installation:
+  1. mysql -u root -p < backend/schema_complete.sql
+  2. Verify: mysql -u root -p erepair_db -e "SHOW TABLES;"
+  3. Change admin password
+
+OPTION 2 - Existing Installation:
+  1. php backend/update_database_complete.php
+  2. php backend/migrations/run_migration.php
+  3. php backend/migrations/run_review_migration.php
+
+OPTION 3 - Manual Setup:
+  1. Import each table definition from DATABASE_SCHEMA.md
+  2. Run individual migration scripts
+
+================================================================================
+MAINTENANCE TASKS
+================================================================================
+
+DAILY:
+  - Cleanup expired sessions: DELETE FROM sessions WHERE expires_at < NOW();
+  - Cleanup expired verifications
+  - Cleanup expired password resets
+  - Or run: CALL cleanup_expired_records();
+
+WEEKLY:
+  - Remove old notifications (90+ days, read)
+  - Optimize frequently updated tables
+
+MONTHLY:
+  - Analyze table statistics
+  - Review slow query log
+  - Check disk space
+
+QUARTERLY:
+  - Review and archive old bookings
+  - Database performance audit
+
+================================================================================
+QUERY EXAMPLES
+================================================================================
+
+Get customer bookings:
+  SELECT b.*, rs.name AS shop_name, u.name AS tech_name
+  FROM bookings b
+  INNER JOIN repair_shops rs ON rs.id = b.shop_id
+  LEFT JOIN technicians t ON t.id = b.technician_id
+  LEFT JOIN users u ON u.id = t.user_id
+  WHERE b.customer_id = ?
+  ORDER BY b.created_at DESC;
+
+Search nearby shops (10km radius):
+  SELECT rs.*, sr.average_rating,
+    (6371 * acos(cos(radians(?)) * cos(radians(rs.latitude)) * 
+     cos(radians(rs.longitude) - radians(?)) + 
+     sin(radians(?)) * sin(radians(rs.latitude)))) AS distance_km
+  FROM repair_shops rs
+  LEFT JOIN shop_ratings sr ON sr.shop_id = rs.id
+  HAVING distance_km < 10
+  ORDER BY distance_km;
+
+Get shop reviews:
+  SELECT r.*, c.name AS customer_name, b.device_type
+  FROM reviews r
+  INNER JOIN users c ON c.id = r.customer_id
+  INNER JOIN bookings b ON b.id = r.booking_id
+  WHERE r.shop_id = ?
+  ORDER BY r.created_at DESC;
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Session not working:
+  - Check expires_at > NOW()
+  - Verify token in cookies
+  - Check session cleanup not running too often
+
+Foreign key error:
+  - Verify parent record exists
+  - Check cascading deletes
+  - Review ON DELETE rules
+
+Rating not updating:
+  - Run: CALL update_shop_ratings(?)
+  - Run: CALL update_technician_ratings(?)
+  - Check review inserted correctly
+
+Slow queries:
+  - Use EXPLAIN to analyze
+  - Add indexes if needed
+  - Limit result sets
+
+================================================================================
+DEVELOPMENT WORKFLOW
+================================================================================
+
+1. Read DATABASE_SCHEMA.md for understanding
+2. Use DATABASE_QUICK_REFERENCE.md during coding
+3. Reference DATABASE_ER_DIAGRAM.md for relationships
+4. Run schema_complete.sql for fresh setup
+5. Refer to README_DATABASE.md for procedures
+
+================================================================================
+TECHNOLOGY STACK
+================================================================================
+
+  Database: MySQL 5.7+ / MariaDB 10.2+
+  Backend: PHP 7.4+
+  Character Set: UTF8MB4
+  Storage Engine: InnoDB
+  Collation: utf8mb4_unicode_ci
+
+================================================================================
+STATISTICS
+================================================================================
+
+  Total Lines of Documentation: ~3,500+
+  Total Documentation Size: ~165KB
+  Total SQL Lines: ~550
+  Tables: 17
+  Foreign Keys: 25+
+  Indexes: 40+
+  Stored Procedures: 3
+  Views: 3
+  Events: 1
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. ✓ Review DATABASE_SCHEMA.md for complete understanding
+2. ✓ Set up database using schema_complete.sql
+3. ✓ Change default admin password
+4. ✓ Configure backend/config/database.php
+5. ✓ Test with sample data
+6. ✓ Customize as needed for your requirements
+
+================================================================================
+
+All documentation is located in:
+  /repair-booking-platform/docs/
+
+Main schema SQL file:
+  /repair-booking-platform/backend/schema_complete.sql
+
+Ready to use! 🚀
+
+================================================================================
+

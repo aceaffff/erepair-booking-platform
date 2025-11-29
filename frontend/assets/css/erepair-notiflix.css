@@ -1,0 +1,305 @@
+/**
+ * ERepair Custom Notiflix Styles
+ * Additional custom styling to match ERepair branding
+ */
+
+/* Custom notification styling - Solid (No Glassmorphism) */
+.erepair-notiflix-success,
+.erepair-notiflix-failure,
+.erepair-notiflix-warning,
+.erepair-notiflix-info {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 
+        0 15px 50px rgba(0, 0, 0, 0.2),
+        0 0 0 1px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.erepair-notiflix-success:hover,
+.erepair-notiflix-failure:hover,
+.erepair-notiflix-warning:hover,
+.erepair-notiflix-info:hover {
+    transform: translateX(-5px) scale(1.02);
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+/* Report dialog styling - True Glassmorphism */
+.erepair-notiflix-report {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(25px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ensure text is readable on transparent background */
+.erepair-notiflix-report * {
+    color: #1f2937 !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.erepair-notiflix-report h2,
+.erepair-notiflix-report h3,
+.erepair-notiflix-report h4,
+.erepair-notiflix-report h5,
+.erepair-notiflix-report h6,
+.erepair-notiflix-report strong {
+    color: #111827 !important;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+}
+
+.erepair-notiflix-report p,
+.erepair-notiflix-report span,
+.erepair-notiflix-report div {
+    color: #374151 !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.erepair-notiflix-report::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, 
+        #6366f1 0%, 
+        #8b5cf6 25%,
+        #a855f7 50%,
+        #8b5cf6 75%,
+        #6366f1 100%);
+    background-size: 200% 100%;
+    border-radius: 24px 24px 0 0;
+    animation: gradientShift 3s ease infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.erepair-notiflix-report::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: 
+        radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+    animation: float 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+@keyframes float {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    33% { transform: translate(30px, -30px) rotate(120deg); }
+    66% { transform: translate(-30px, 30px) rotate(240deg); }
+}
+
+/* Confirm dialog styling - True Glassmorphism */
+.erepair-notiflix-confirm {
+    background: rgba(255, 255, 255, 0.15) !important;
+    backdrop-filter: blur(25px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+    box-shadow: 
+        0 25px 80px rgba(99, 102, 241, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ensure text is readable on transparent background */
+.erepair-notiflix-confirm * {
+    color: #1f2937 !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.erepair-notiflix-confirm h2,
+.erepair-notiflix-confirm h3,
+.erepair-notiflix-confirm h4,
+.erepair-notiflix-confirm h5,
+.erepair-notiflix-confirm h6,
+.erepair-notiflix-confirm strong {
+    color: #111827 !important;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.9);
+}
+
+.erepair-notiflix-confirm p,
+.erepair-notiflix-confirm span,
+.erepair-notiflix-confirm div {
+    color: #374151 !important;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.erepair-notiflix-confirm::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, 
+        #6366f1 0%, 
+        #8b5cf6 25%,
+        #a855f7 50%,
+        #8b5cf6 75%,
+        #6366f1 100%);
+    background-size: 200% 100%;
+    border-radius: 24px 24px 0 0;
+    animation: gradientShift 3s ease infinite;
+}
+
+/* Button enhancements */
+.erepair-notiflix-report button,
+.erepair-notiflix-confirm button {
+    border-radius: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.erepair-notiflix-report button:hover,
+.erepair-notiflix-confirm button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.erepair-notiflix-report button:active,
+.erepair-notiflix-confirm button:active {
+    transform: translateY(0);
+}
+
+/* Loading spinner enhancement - Glassmorphism */
+.erepair-notiflix-loading {
+    background: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 24px !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Block overlay enhancement - Glassmorphism */
+.erepair-notiflix-block {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+    box-shadow: 
+        0 10px 40px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 16px !important;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Backdrop overlay blur effect for dialogs - Enhanced */
+/* Target Notiflix backdrop elements with multiple selector strategies */
+.notiflix-backdrop,
+[class*="notiflix-backdrop"],
+[class*="NotiflixBackdrop"],
+[class*="notiflix-overlay"],
+[class*="NotiflixOverlay"] {
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+    background: rgba(11, 18, 32, 0.85) !important;
+    transition: backdrop-filter 0.3s ease, background 0.3s ease !important;
+}
+
+/* Target backdrop divs that Notiflix creates dynamically */
+body > div[style*="position: fixed"][style*="z-index"]:not(.erepair-notiflix-report):not(.erepair-notiflix-confirm):not(.erepair-notiflix-success):not(.erepair-notiflix-failure):not(.erepair-notiflix-warning):not(.erepair-notiflix-info) {
+    backdrop-filter: blur(20px) saturate(200%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(200%) !important;
+}
+
+/* Ensure dialog content is above backdrop */
+.erepair-notiflix-report,
+.erepair-notiflix-confirm {
+    z-index: 4004 !important;
+    position: relative;
+}
+
+/* Make sure text is readable on blurred background */
+.erepair-notiflix-report *,
+.erepair-notiflix-confirm * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .erepair-notiflix-report,
+    .erepair-notiflix-confirm {
+        width: 90% !important;
+        margin: 1rem !important;
+        border-radius: 20px !important;
+    }
+    
+    .erepair-notiflix-success,
+    .erepair-notiflix-failure,
+    .erepair-notiflix-warning,
+    .erepair-notiflix-info {
+        width: 90% !important;
+        margin: 1rem !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .erepair-notiflix-report,
+    .erepair-notiflix-confirm {
+        background: rgba(31, 41, 55, 0.95) !important;
+        border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+    
+    .erepair-notiflix-report *,
+    .erepair-notiflix-confirm * {
+        color: #f9fafb !important;
+    }
+    
+    .erepair-notiflix-success,
+    .erepair-notiflix-failure,
+    .erepair-notiflix-warning,
+    .erepair-notiflix-info {
+        background: rgba(31, 41, 55, 0.85) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    .erepair-notiflix-loading {
+        background: rgba(31, 41, 55, 0.9) !important;
+        border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+    
+    .erepair-notiflix-block {
+        background: rgba(31, 41, 55, 0.9) !important;
+        border-color: rgba(99, 102, 241, 0.3) !important;
+    }
+}
+
