@@ -15,10 +15,35 @@ if (empty($token)) redirect_to_login();
 $database = new Database();
 $db = $database->getConnection();
 
-$stmt = $db->prepare("SELECT u.id, u.name, u.email, u.phone, u.avatar_url, u.role, so.id as shop_id, so.shop_name, so.shop_address, so.shop_latitude, so.shop_longitude, so.approval_status FROM users u INNER JOIN sessions s ON u.id = s.user_id LEFT JOIN shop_owners so ON so.user_id = u.id WHERE s.token = ? AND s.expires_at > NOW()");
+$stmt = $db->prepare("SELECT u.id, u.name, u.email, u.phone, u.avatar as avatar_url, u.role, so.id as shop_id, so.shop_name, so.shop_address, so.shop_latitude, so.shop_longitude, so.approval_status FROM users u INNER JOIN sessions s ON u.id = s.user_id LEFT JOIN shop_owners so ON so.user_id = u.id WHERE s.token = ? AND s.expires_at > NOW()");
 $stmt->execute([$token]);
 $user = $stmt->fetch();
 if (!$user || $user['role'] !== 'shop_owner') redirect_to_login();
+
+// Check if shop profile exists
+if (empty($user['shop_id'])) {
+    // Shop owner exists but shop_owners record is missing
+    // This can happen if registration was incomplete
+    // Show error message and redirect to registration or show helpful message
+    header('Content-Type: text/html; charset=utf-8');
+    echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>Shop Profile Required</title>";
+    echo "<style>body{font-family:Arial,sans-serif;max-width:600px;margin:50px auto;padding:20px;text-align:center;}";
+    echo ".error-box{background:#fee;border:2px solid #fcc;padding:20px;border-radius:8px;margin:20px 0;}";
+    echo ".btn{display:inline-block;padding:10px 20px;background:#4f46e5;color:white;text-decoration:none;border-radius:5px;margin:10px;}";
+    echo "</style></head><body>";
+    echo "<div class='error-box'>";
+    echo "<h2>Shop Profile Required</h2>";
+    echo "<p>Your shop profile is incomplete. Please complete your shop registration to access the dashboard.</p>";
+    echo "<p><strong>What to do:</strong></p>";
+    echo "<ol style='text-align:left;display:inline-block;'>";
+    echo "<li>Log out and complete your shop owner registration</li>";
+    echo "<li>Make sure all required documents are uploaded</li>";
+    echo "<li>Wait for admin approval if your account is pending</li>";
+    echo "</ol>";
+    echo "<a href='../auth/index.php?logout=1' class='btn'>Go to Login</a>";
+    echo "</div></body></html>";
+    exit;
+}
 
 function h($v){return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');}
 ?>
@@ -29,6 +54,7 @@ function h($v){return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ERepair Shop Owner - Manage your shop, bookings, and technicians">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ERepair Shop">
@@ -2910,16 +2936,56 @@ function h($v){return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');}
                     
                 const res = await fetch('../technician/technician_create.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(this.techForm) });
                     let data = {};
-                    try { data = await res.json(); } catch(e) { data = {}; }
+                    let responseText = '';
+                    try { 
+                        responseText = await res.text();
+                        console.log('Technician create response:', responseText);
+                        data = responseText ? JSON.parse(responseText) : {};
+                    } catch(e) { 
+                        console.error('Failed to parse response:', e, 'Response text:', responseText);
+                        data = { error: 'Invalid server response', detail: responseText.substring(0, 200) };
+                    }
+                    
                     if(res.ok && data.success){
-                        Notiflix.Report.success('Created','Technician added. A verification email may be required.','OK');
+                        Notiflix.Report.success('Success','Technician added successfully!','OK');
                         this.techForm={name:'',email:'',phone:'',password:''};
                         this.showTechPassword = false;
                         this.showTechModal = false;
                         this.loadTechs();
                     } else {
-                        const msg = data.error || data.detail || `Failed (HTTP ${res.status})`;
-                        Notiflix.Report.failure('Error', msg,'OK');
+                        // Provide more specific error messages
+                        let errorMsg = data.error || data.detail || `Failed to create technician (HTTP ${res.status})`;
+                        
+                        // Log full error for debugging
+                        console.error('Technician creation failed:', {
+                            status: res.status,
+                            error: data.error,
+                            detail: data.detail,
+                            fullResponse: data
+                        });
+                        
+                        // Map common error codes to user-friendly messages
+                        if(res.status === 409) {
+                            errorMsg = 'This email is already registered. Please use a different email address.';
+                        } else if(res.status === 400) {
+                            if(errorMsg.includes('Shop profile') || errorMsg.includes('shop profile')) {
+                                errorMsg = 'Your shop profile is incomplete. Please complete your shop registration first.';
+                            } else if(errorMsg.includes('Email already') || errorMsg.includes('email')) {
+                                errorMsg = 'This email is already registered. Please use a different email address.';
+                            } else if(errorMsg.includes('Phone')) {
+                                errorMsg = 'Phone number must start with 09 and be exactly 11 digits.';
+                            } else if(errorMsg.includes('Password')) {
+                                errorMsg = 'Password must be between 6 and 128 characters and contain only allowed characters.';
+                            } else if(errorMsg.includes('Name')) {
+                                errorMsg = 'Name must be between 2 and 100 characters.';
+                            }
+                        } else if(res.status === 401) {
+                            errorMsg = 'Your session has expired. Please refresh the page and try again.';
+                        } else if(res.status === 403) {
+                            errorMsg = 'Your shop is not yet approved. Please wait for admin approval.';
+                        }
+                        
+                        Notiflix.Report.failure('Error Creating Technician', errorMsg,'OK');
                     }
                 }catch(e){ 
                     console.error('Create technician error:', e);

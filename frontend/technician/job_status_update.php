@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../backend/utils/ResponseHelper.php';
 require_once __DIR__ . '/../../backend/config/database.php';
 require_once __DIR__ . '/../../backend/utils/DBTransaction.php';
+require_once __DIR__ . '/../../backend/utils/NotificationHelper.php';
 
 // Initialize API environment
 ResponseHelper::initApi();
@@ -56,9 +57,18 @@ try{
                           WHERE b.id=? AND b.technician_id=?");
     $stmt->execute([$bookingId, $tech['tech_id']]);
     $booking = $stmt->fetch();
-
+    
     if(!$booking){
         ResponseHelper::notFound('Booking not found or not assigned to you'); 
+    }
+    
+    // Get service name for notifications
+    $serviceName = $booking['device_description'];
+    if (!empty($booking['notes'])) {
+        $notesData = json_decode($booking['notes'], true);
+        if (is_array($notesData) && isset($notesData['service'])) {
+            $serviceName = $notesData['service'];
+        }
     }
 
     // Validate status transitions
@@ -71,10 +81,34 @@ try{
     }
 
     // Execute transaction with safe handling
-    DBTransaction::execute($db, function($pdo) use ($newStatus, $bookingId, $booking) {
+    DBTransaction::execute($db, function($pdo) use ($newStatus, $bookingId, $booking, $serviceName) {
         // Update the booking status
         $updateStmt = $pdo->prepare("UPDATE bookings SET status=?, updated_at=NOW() WHERE id=?");
         $updateStmt->execute([$newStatus, $bookingId]);
+
+        // Create notification for customer
+        try {
+            if($newStatus === 'completed'){
+                NotificationHelper::notifyBookingCompleted(
+                    $pdo,
+                    $booking['customer_id'],
+                    $booking['shop_name'],
+                    $serviceName,
+                    $bookingId
+                );
+            } elseif($newStatus === 'in_progress'){
+                NotificationHelper::notifyBookingInProgress(
+                    $pdo,
+                    $booking['customer_id'],
+                    $booking['shop_name'],
+                    $serviceName,
+                    $bookingId
+                );
+            }
+        } catch(Exception $e) {
+            // Log notification error but don't fail the request
+            error_log("Notification creation failed for booking " . $bookingId . ": " . $e->getMessage());
+        }
 
         // Send email notification to customer
         try {
@@ -86,15 +120,6 @@ try{
                 error_log("Email service connection failed, skipping email notification for booking: " . $bookingId);
             } else {
                 $currentDate = date('F j, Y \a\t g:i A');
-                
-                // Parse service name from notes
-                $serviceName = $booking['device_description'];
-                if (!empty($booking['notes'])) {
-                    $notesData = json_decode($booking['notes'], true);
-                    if (is_array($notesData) && isset($notesData['service'])) {
-                        $serviceName = $notesData['service'];
-                    }
-                }
                 
                 if($newStatus === 'completed'){
                     $emailSent = $emailService->sendRepairCompletionEmail(

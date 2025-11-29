@@ -23,7 +23,19 @@ function auth_shop(PDO $db){
     $stmt->execute([$token]);
     $u = $stmt->fetch();
     if(!$u || $u['role']!=='shop_owner'){ ResponseHelper::unauthorized('Unauthorized'); }
-    if(empty($u['shop_id'])){ ResponseHelper::error('Shop profile not found', 400); }
+    
+    // Fallback: get shop_id directly if missing
+    if(empty($u['shop_id'])){
+        $fallback = $db->prepare('SELECT id FROM shop_owners WHERE user_id=? LIMIT 1');
+        $fallback->execute([$u['user_id']]);
+        $shopOwnerRecord = $fallback->fetch();
+        if($shopOwnerRecord){
+            $u['shop_id'] = $shopOwnerRecord['id'];
+        } else {
+            ResponseHelper::error('Shop profile not found', 400);
+        }
+    }
+    
     return $u;
 }
 
@@ -424,12 +436,20 @@ try{
         error_log("Assigning technician ID: $techId to booking ID: $bookingId");
         
         // Verify technician belongs to this shop AND is active
+        // Check if shop_owner_id column exists, otherwise fallback to shop_id
+        $checkColumn = $db->query("SHOW COLUMNS FROM technicians LIKE 'shop_owner_id'");
+        $hasShopOwnerId = $checkColumn->rowCount() > 0;
+        
+        if ($hasShopOwnerId) {
+            $t = $db->prepare('SELECT t.id, u.status FROM technicians t INNER JOIN users u ON u.id=t.user_id WHERE t.id=? AND t.shop_owner_id=?');
+        } else {
         $t = $db->prepare('SELECT t.id, u.status FROM technicians t INNER JOIN users u ON u.id=t.user_id WHERE t.id=? AND t.shop_id=?');
+        }
         $t->execute([$techId, $shop['shop_id']]);
         $techRow = $t->fetch();
         
         if(!$techRow){ 
-            ResponseHelper::error('Technician not found', 400); 
+            ResponseHelper::error('Technician not found or does not belong to your shop', 400); 
         }
         
         if(in_array(($techRow['status'] ?? ''), ['deactivated','rejected'], true)){

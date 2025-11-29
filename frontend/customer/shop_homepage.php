@@ -44,7 +44,7 @@ if (!$db) {
 try {
     try {
         $stmt = $db->prepare("
-            SELECT u.id, u.name, u.email, u.phone, u.avatar_url, u.role 
+            SELECT u.id, u.name, u.email, u.phone, u.avatar as avatar_url, u.role 
             FROM users u 
             INNER JOIN sessions s ON u.id = s.user_id 
             WHERE s.token = ? AND s.expires_at > NOW()

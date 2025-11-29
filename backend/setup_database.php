@@ -67,6 +67,43 @@ try {
         echo "✓ Database setup completed!\n";
         echo "✓ Found " . count($tables) . " tables\n\n";
         
+        // Verify avatar column exists (not avatar_url)
+        $stmt = $conn->query("SHOW COLUMNS FROM users LIKE 'avatar'");
+        $avatarExists = $stmt->rowCount() > 0;
+        
+        if ($avatarExists) {
+            echo "✓ Avatar column verified (using 'avatar' not 'avatar_url')\n";
+        } else {
+            echo "⚠ Avatar column not found - database may need migration\n";
+            echo "Run: php migrations/fix_avatar_column.php to fix this\n";
+        }
+        
+        // Verify technicians table structure
+        $stmt = $conn->query("SHOW TABLES LIKE 'technicians'");
+        if ($stmt->rowCount() > 0) {
+            $stmt = $conn->query("SHOW COLUMNS FROM technicians LIKE 'shop_owner_id'");
+            $hasShopOwnerId = $stmt->rowCount() > 0;
+            
+            if ($hasShopOwnerId) {
+                echo "✓ Technicians table structure verified (using 'shop_owner_id')\n";
+            } else {
+                echo "⚠ Technicians table may need migration\n";
+                echo "Run: php migrations/fix_technicians_table_structure.php to fix this\n";
+            }
+        }
+        
+        // Verify scheduled_at is nullable in bookings
+        $stmt = $conn->query("SHOW COLUMNS FROM bookings WHERE Field = 'scheduled_at'");
+        $scheduledAtCol = $stmt->fetch();
+        if ($scheduledAtCol && $scheduledAtCol['Null'] === 'YES') {
+            echo "✓ Bookings.scheduled_at is nullable (correct)\n";
+        } else if ($scheduledAtCol) {
+            echo "⚠ Bookings.scheduled_at is NOT NULL - may need migration\n";
+            echo "Run: php migrations/make_scheduled_at_nullable.php to fix this\n";
+        }
+        
+        echo "\n";
+        
         echo "Default admin credentials:\n";
         echo "Email: admin@repair.com\n";
         echo "Password: admin123\n";

@@ -97,7 +97,7 @@ try {
     @chmod($dest, 0644);
     $publicPath = 'uploads/avatars/' . $filename;
 
-    $stmt = $db->prepare('UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?');
+    $stmt = $db->prepare('UPDATE users SET avatar = ?, updated_at = NOW() WHERE id = ?');
     $stmt->execute([$publicPath, $user['id']]);
 
     respond_json(200, ['success' => true, 'avatar_url' => $publicPath]);

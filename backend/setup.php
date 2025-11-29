@@ -39,6 +39,7 @@ try {
     output("Step 1: Connecting to MySQL server...", 'info');
     $pdo = new PDO("mysql:host=localhost", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true); // Enable buffered queries
     output("✓ Connected to MySQL server", 'success');
     
     // Step 2: Read schema file
@@ -58,55 +59,83 @@ try {
     // Step 3: Execute SQL statements
     output("Step 3: Executing SQL statements...", 'info');
     
-    // Remove comments and split by semicolon, but handle DELIMITER statements
+    // Better SQL parsing that handles DELIMITER statements properly
     $statements = [];
     $currentStatement = '';
     $delimiter = ';';
-    $inDelimiterBlock = false;
+    
+    // Remove single-line comments first
+    $schema = preg_replace('/^--.*$/m', '', $schema);
     
     $lines = explode("\n", $schema);
-    foreach ($lines as $line) {
-        $line = trim($line);
+    foreach ($lines as $lineNum => $line) {
+        $originalLine = $line;
+        $line = rtrim($line);
         
-        // Skip empty lines and comments
-        if (empty($line) || preg_match('/^--/', $line) || preg_match('/^\/\*/', $line)) {
+        // Skip empty lines
+        if (empty($line)) {
             continue;
         }
         
         // Handle DELIMITER statements
-        if (preg_match('/^DELIMITER\s+(.+)$/i', $line, $matches)) {
-            if ($inDelimiterBlock && !empty($currentStatement)) {
+        if (preg_match('/^\s*DELIMITER\s+(.+)$/i', $line, $matches)) {
+            // Save current statement if any
+            if (!empty(trim($currentStatement))) {
                 $statements[] = trim($currentStatement);
                 $currentStatement = '';
             }
+            // Change delimiter
             $delimiter = trim($matches[1]);
-            $inDelimiterBlock = ($delimiter !== ';');
             continue;
         }
         
         // Check if line ends with current delimiter
-        if (substr(rtrim($line), -strlen($delimiter)) === $delimiter) {
-            $currentStatement .= "\n" . substr($line, 0, -strlen($delimiter));
+        $delimiterLen = strlen($delimiter);
+        if (strlen($line) >= $delimiterLen && substr($line, -$delimiterLen) === $delimiter) {
+            // Add line without delimiter
+            $currentStatement .= "\n" . substr($line, 0, -$delimiterLen);
             if (!empty(trim($currentStatement))) {
                 $statements[] = trim($currentStatement);
             }
             $currentStatement = '';
-            if ($inDelimiterBlock && $delimiter !== ';') {
+            // Reset delimiter to semicolon after stored procedure
+            if ($delimiter !== ';') {
                 $delimiter = ';';
-                $inDelimiterBlock = false;
             }
         } else {
+            // Add line to current statement
             $currentStatement .= "\n" . $line;
         }
+    }
+    
+    // Add any remaining statement
+    if (!empty(trim($currentStatement))) {
+        $statements[] = trim($currentStatement);
     }
     
     // Execute each statement
     $executed = 0;
     $errors = 0;
+    $errorMessages = [];
     
-    foreach ($statements as $statement) {
+    foreach ($statements as $index => $statement) {
         $statement = trim($statement);
         if (empty($statement)) {
+            continue;
+        }
+        
+        // Skip SELECT statements (they're just informational)
+        if (preg_match('/^\s*SELECT\s+/i', $statement)) {
+            continue;
+        }
+        
+        // Skip SET GLOBAL (may require privileges)
+        if (preg_match('/^\s*SET\s+GLOBAL/i', $statement)) {
+            try {
+                $pdo->exec($statement);
+            } catch (PDOException $e) {
+                // Ignore privilege errors for SET GLOBAL
+            }
             continue;
         }
         
@@ -114,13 +143,31 @@ try {
             $pdo->exec($statement);
             $executed++;
         } catch (PDOException $e) {
-            // Some errors are expected (like DROP TABLE IF EXISTS on non-existent tables)
-            // Only report actual errors
-            if (strpos($e->getMessage(), "doesn't exist") === false && 
-                strpos($e->getMessage(), "Unknown database") === false) {
+            $errorCode = $e->getCode();
+            $errorMsg = $e->getMessage();
+            
+            // Ignore expected errors
+            $ignoreErrors = [
+                "doesn't exist",
+                "Unknown database",
+                "already exists",
+                "Duplicate key",
+                "Duplicate entry"
+            ];
+            
+            $shouldIgnore = false;
+            foreach ($ignoreErrors as $ignore) {
+                if (stripos($errorMsg, $ignore) !== false) {
+                    $shouldIgnore = true;
+                    break;
+                }
+            }
+            
+            if (!$shouldIgnore) {
                 $errors++;
-                if ($errors <= 5) { // Only show first 5 errors
-                    output("Warning: " . $e->getMessage(), 'error');
+                $errorMessages[] = "Statement " . ($index + 1) . ": " . substr($errorMsg, 0, 100);
+                if ($errors <= 10) { // Show first 10 errors
+                    output("Warning: " . substr($errorMsg, 0, 150), 'error');
                 }
             }
         }
@@ -175,6 +222,41 @@ try {
             output("✓ Admin user verified", 'success');
         } else {
             output("⚠ Admin user not found - please check schema", 'error');
+        }
+        
+        // Verify avatar column exists (not avatar_url)
+        $stmt = $conn->query("SHOW COLUMNS FROM users LIKE 'avatar'");
+        $avatarExists = $stmt->rowCount() > 0;
+        
+        if ($avatarExists) {
+            output("✓ Avatar column verified (using 'avatar' not 'avatar_url')", 'success');
+        } else {
+            output("⚠ Avatar column not found - database may need migration", 'error');
+            output("Run: migrations/fix_avatar_column.php to fix this", 'info');
+        }
+        
+        // Verify technicians table structure
+        $stmt = $conn->query("SHOW TABLES LIKE 'technicians'");
+        if ($stmt->rowCount() > 0) {
+            $stmt = $conn->query("SHOW COLUMNS FROM technicians LIKE 'shop_owner_id'");
+            $hasShopOwnerId = $stmt->rowCount() > 0;
+            
+            if ($hasShopOwnerId) {
+                output("✓ Technicians table structure verified (using 'shop_owner_id')", 'success');
+            } else {
+                output("⚠ Technicians table may need migration", 'error');
+                output("Run: migrations/fix_technicians_table_structure.php to fix this", 'info');
+            }
+        }
+        
+        // Verify scheduled_at is nullable in bookings
+        $stmt = $conn->query("SHOW COLUMNS FROM bookings WHERE Field = 'scheduled_at'");
+        $scheduledAtCol = $stmt->fetch();
+        if ($scheduledAtCol && $scheduledAtCol['Null'] === 'YES') {
+            output("✓ Bookings.scheduled_at is nullable (correct)", 'success');
+        } else if ($scheduledAtCol) {
+            output("⚠ Bookings.scheduled_at is NOT NULL - may need migration", 'error');
+            output("Run: migrations/make_scheduled_at_nullable.php to fix this", 'info');
         }
     } else {
         throw new Exception("Failed to connect to database after setup");

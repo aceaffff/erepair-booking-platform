@@ -21,17 +21,41 @@ try{
 
     // Ensure the shop owner has a valid shop profile linked
     if(empty($shopUser['shop_id'])){
-        http_response_code(400);
-        echo json_encode(['error'=>'Shop profile not found. Please complete your shop profile before adding technicians.']);
-        exit;
+        // Try to get shop_id directly from shop_owners table
+        $fallback = $db->prepare('SELECT id FROM shop_owners WHERE user_id=? LIMIT 1');
+        $fallback->execute([$shopUser['id']]);
+        $shopOwnerRecord = $fallback->fetch();
+        
+        if($shopOwnerRecord){
+            $shopUser['shop_id'] = $shopOwnerRecord['id'];
+        } else {
+            http_response_code(400);
+            echo json_encode([
+                'error'=>'Shop profile not found. Please complete your shop profile before adding technicians.',
+                'detail'=>'No shop_owners record found for your user account.'
+            ]);
+            exit;
+        }
     }
 
-    // Validate that the shop_owners record actually exists (defensive against inconsistent data)
-    $chk = $db->prepare('SELECT id FROM shop_owners WHERE id=?');
+    // Validate that the shop_owners record actually exists and is approved
+    $chk = $db->prepare('SELECT id, approval_status FROM shop_owners WHERE id=?');
     $chk->execute([$shopUser['shop_id']]);
-    if(!$chk->fetch()){
+    $shopOwner = $chk->fetch();
+    
+    if(!$shopOwner){
         http_response_code(400);
         echo json_encode(['error'=>'Shop profile is invalid. Please refresh and try again.']);
+        exit;
+    }
+    
+    // Check if shop is approved
+    if($shopOwner['approval_status'] !== 'approved'){
+        http_response_code(403);
+        echo json_encode([
+            'error'=>'Your shop is not yet approved. Please wait for admin approval before adding technicians.',
+            'status'=>$shopOwner['approval_status']
+        ]);
         exit;
     }
 
@@ -114,23 +138,57 @@ try{
     }
 
     // Check duplicate email
-    $exists = $db->prepare('SELECT id FROM users WHERE email=?');
+    $exists = $db->prepare('SELECT id, role FROM users WHERE email=?');
     $exists->execute([$email]);
-    if($exists->fetch()){ http_response_code(409); echo json_encode(['error'=>'Email already exists']); exit; }
+    $existingUser = $exists->fetch();
+    if($existingUser){ 
+        http_response_code(409); 
+        echo json_encode([
+            'error'=>'Email already exists',
+            'detail'=>'This email address is already registered in the system. Please use a different email address.'
+        ]); 
+        exit; 
+    }
 
-    // Ensure technicians table exists (using existing structure)
-    $db->exec("CREATE TABLE IF NOT EXISTS technicians (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        shop_id INT NOT NULL,
-        skills TEXT,
-        rating FLOAT DEFAULT 0,
-        total_ratings INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (shop_id) REFERENCES shop_owners(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB");
+    // Ensure technicians table exists (using schema structure)
+    // Check if table exists and has correct structure
+    $tableExists = false;
+    try {
+        $checkTable = $db->query("SHOW TABLES LIKE 'technicians'");
+        $tableExists = $checkTable->rowCount() > 0;
+    } catch (PDOException $e) {
+        // Table doesn't exist
+    }
+    
+    if (!$tableExists) {
+        // Create table with correct schema structure
+        $db->exec("CREATE TABLE technicians (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            shop_owner_id INT NOT NULL,
+            shop_id INT,
+            avatar VARCHAR(500),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (shop_owner_id) REFERENCES shop_owners(id) ON DELETE CASCADE,
+            INDEX idx_user_id (user_id),
+            INDEX idx_shop_owner_id (shop_owner_id),
+            INDEX idx_shop_id (shop_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } else {
+        // Check if shop_owner_id column exists, if not add it
+        $checkColumn = $db->query("SHOW COLUMNS FROM technicians LIKE 'shop_owner_id'");
+        if ($checkColumn->rowCount() == 0) {
+            // Add shop_owner_id column if missing
+            try {
+                $db->exec("ALTER TABLE technicians ADD COLUMN shop_owner_id INT NOT NULL AFTER user_id");
+                $db->exec("ALTER TABLE technicians ADD FOREIGN KEY (shop_owner_id) REFERENCES shop_owners(id) ON DELETE CASCADE");
+            } catch (PDOException $e) {
+                // Column might already exist or foreign key might fail, continue anyway
+            }
+        }
+    }
 
     // Create user and link to shop in a transaction
     $db->beginTransaction();
@@ -139,7 +197,8 @@ try{
     $stmt->execute([$name,$email,$phone,$hash]);
     $techUserId = (int)$db->lastInsertId();
 
-    $stmt = $db->prepare("INSERT INTO technicians (user_id, shop_id) VALUES (?, ?)");
+    // Insert into technicians table using shop_owner_id (which is the shop_owners.id)
+    $stmt = $db->prepare("INSERT INTO technicians (user_id, shop_owner_id) VALUES (?, ?)");
     $stmt->execute([$techUserId, $shopUser['shop_id']]);
 
     $db->commit();

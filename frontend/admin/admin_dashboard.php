@@ -17,7 +17,7 @@ $db = (new Database())->getConnection();
 
 // Verify session + admin role
 try {
-    $stmt = $db->prepare("SELECT u.id, u.name, u.email, u.role, u.logo_url, u.avatar_url FROM users u INNER JOIN sessions s ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > NOW() LIMIT 1");
+    $stmt = $db->prepare("SELECT u.id, u.name, u.email, u.role, u.logo_url, u.avatar as avatar_url FROM users u INNER JOIN sessions s ON s.user_id = u.id WHERE s.token = ? AND s.expires_at > NOW() LIMIT 1");
     $stmt->execute([$token]);
     $user = $stmt->fetch();
 } catch (PDOException $e) {
@@ -41,6 +41,7 @@ function h($v){ return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ERepair Admin - Manage your electronics repair booking platform">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ERepair Admin">

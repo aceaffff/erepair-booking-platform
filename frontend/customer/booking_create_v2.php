@@ -131,7 +131,7 @@ try {
     // Handle device photo upload
     $devicePhoto = validate_and_upload_device_photo();
     
-    // scheduled_at will be NULL initially - will be set when customer confirms booking
+    // scheduled_at can be NULL initially - will be set when customer confirms booking
     $scheduledAt = null;
     
     // Validate shop owner exists and is approved

@@ -30,7 +30,7 @@ try {
     
     // Get all customers with their booking counts
     $stmt = $db->prepare("
-        SELECT u.id, u.name, u.email, u.phone, u.address, u.email_verified, u.created_at, u.avatar_url,
+        SELECT u.id, u.name, u.email, u.phone, u.address, u.email_verified, u.created_at, u.avatar as avatar_url,
                COUNT(b.id) as total_bookings
         FROM users u
         LEFT JOIN bookings b ON u.id = b.customer_id

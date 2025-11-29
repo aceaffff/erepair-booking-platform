@@ -37,7 +37,7 @@ if (!$db) {
 
 try {
     $stmt = $db->prepare("
-    SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.email_verified, u.created_at, u.avatar_url
+    SELECT u.id, u.name, u.email, u.phone, u.address, u.role, u.email_verified, u.created_at, u.avatar as avatar_url
         FROM users u
         INNER JOIN sessions s ON u.id = s.user_id
         WHERE s.token = ? AND s.expires_at > NOW()
@@ -83,6 +83,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ERepair - Book and manage your electronics repair services">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ERepair">
@@ -1751,6 +1752,18 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                                                             <div class="small ms-4" x-text="b.date ? b.date + (b.time_slot ? ' at ' + b.time_slot : '') : 'Not scheduled'"></div>
                                                         </div>
                                                     </div>
+                                                    
+                                                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                                                        <button x-show="canReview(b) && !b.reviewed" 
+                                                                class="btn btn-primary w-100 py-2 shadow-sm text-white" 
+                                                                @click="openReviewModal(b)"
+                                                                style="border-radius: 25px;">
+                                                            <i class="fas fa-star me-2"></i>Leave Review
+                                                        </button>
+                                                        <span x-show="b.reviewed" class="text-success small w-100 text-center d-flex align-items-center justify-content-center">
+                                                            <i class="fas fa-check-circle me-1"></i>Reviewed
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1800,8 +1813,12 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                                             <span class="badge bg-success" x-text="b.status"></span>
                                         </td>
                                         <td class="text-end">
-                                            <button x-show="!b.reviewed" class="btn btn-sm btn-outline-primary" @click="openReviewModal(b)">Review</button>
-                                            <span x-show="b.reviewed" class="text-success small"><i class="fas fa-check-circle me-1"></i>Reviewed</span>
+                                            <button x-show="canReview(b) && !b.reviewed" class="btn btn-sm btn-outline-primary" @click="openReviewModal(b)">
+                                                <i class="fas fa-star me-1"></i>Review
+                                            </button>
+                                            <span x-show="b.reviewed" class="text-success small">
+                                                <i class="fas fa-check-circle me-1"></i>Reviewed
+                                            </span>
                                         </td>
                                     </tr>
                                 </template>

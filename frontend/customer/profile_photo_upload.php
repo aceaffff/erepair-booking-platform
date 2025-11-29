@@ -75,7 +75,7 @@ try{
     $publicUrl = 'uploads/avatars/' . $filename;
 
     try {
-        $stmt = $db->prepare('UPDATE users SET avatar_url=?, updated_at=NOW() WHERE id=?');
+        $stmt = $db->prepare('UPDATE users SET avatar=?, updated_at=NOW() WHERE id=?');
         $stmt->execute([$publicUrl, $u['id']]);
     } catch (PDOException $e) {
         if (strpos($e->getMessage(), 'Unknown column') !== false) {

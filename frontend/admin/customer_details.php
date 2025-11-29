@@ -37,7 +37,7 @@ try {
     
     // Get customer details
     $stmt = $db->prepare("
-        SELECT u.id, u.name, u.email, u.phone, u.address, u.email_verified, u.created_at, u.avatar_url
+        SELECT u.id, u.name, u.email, u.phone, u.address, u.email_verified, u.created_at, u.avatar as avatar_url
         FROM users u
         WHERE u.id = ? AND u.role = 'customer'
     ");

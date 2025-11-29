@@ -77,7 +77,7 @@ try {
         
         // Insert review
         $insertStmt = $db->prepare("
-            INSERT INTO reviews (booking_id, technician_id, shop_id, customer_id, technician_rating, technician_comment)
+            INSERT INTO reviews (booking_id, technician_id, shop_id, customer_id, rating, comment)
             VALUES (?, ?, ?, ?, ?, ?)
         ");
         
@@ -96,10 +96,10 @@ try {
             SELECT 
                 technician_id,
                 COUNT(*) as total_reviews,
-                AVG(technician_rating) as average_rating,
-                SUM(technician_rating) as total_rating_sum
+                AVG(rating) as average_rating,
+                SUM(rating) as total_rating_sum
             FROM reviews 
-            WHERE technician_id = ? AND technician_rating IS NOT NULL
+            WHERE technician_id = ? AND rating IS NOT NULL
             GROUP BY technician_id
             ON DUPLICATE KEY UPDATE
                 total_reviews = VALUES(total_reviews),
@@ -115,10 +115,10 @@ try {
             SELECT 
                 shop_id,
                 COUNT(*) as total_reviews,
-                AVG(technician_rating) as average_rating,
-                SUM(technician_rating) as total_rating_sum
+                AVG(rating) as average_rating,
+                SUM(rating) as total_rating_sum
             FROM reviews 
-            WHERE shop_id = ? AND technician_rating IS NOT NULL
+            WHERE shop_id = ? AND rating IS NOT NULL
             GROUP BY shop_id
             ON DUPLICATE KEY UPDATE
                 total_reviews = VALUES(total_reviews),
@@ -128,13 +128,8 @@ try {
         ");
         $updateShopRatingStmt->execute([$booking['shop_id']]);
         
-        // Update booking to mark as reviewed
-        $updateBookingStmt = $db->prepare("
-            UPDATE bookings 
-            SET notes = JSON_SET(COALESCE(notes, '{}'), '$.reviewed', true, '$.reviewed_at', NOW())
-            WHERE id = ?
-        ");
-        $updateBookingStmt->execute([$bookingId]);
+        // Update booking to mark as reviewed (optional - reviews table already tracks this)
+        // The reviewed status is determined by checking if a review exists in the reviews table
         
         // Commit transaction
         $db->commit();

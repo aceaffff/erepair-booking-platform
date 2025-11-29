@@ -46,7 +46,7 @@ try{
 
     // Update user avatar_url in database
     $avatarUrl = 'uploads/avatars/' . $filename;
-    $stmt = $db->prepare('UPDATE users SET avatar_url=?, updated_at=NOW() WHERE id=?');
+    $stmt = $db->prepare('UPDATE users SET avatar=?, updated_at=NOW() WHERE id=?');
     $stmt->execute([$avatarUrl, $tech['id']]);
 
     echo json_encode(['success'=>true, 'avatar_url'=>$avatarUrl]);

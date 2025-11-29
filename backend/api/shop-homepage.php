@@ -30,7 +30,7 @@ try {
                 u.name as owner_name,
                 u.email as owner_email,
                 u.phone as owner_phone,
-                u.avatar_url as owner_avatar_url,
+                u.avatar as owner_avatar_url,
                 so.approval_status
             FROM shop_owners so
             LEFT JOIN repair_shops rs ON rs.owner_id = so.id
@@ -52,7 +52,7 @@ try {
                 u.name as owner_name,
                 u.email as owner_email,
                 u.phone as owner_phone,
-                u.avatar_url as owner_avatar_url,
+                u.avatar as owner_avatar_url,
                 so.approval_status
             FROM shop_owners so
             LEFT JOIN users u ON u.id = so.user_id

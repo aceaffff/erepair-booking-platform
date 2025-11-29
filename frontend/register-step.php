@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ERepair - Register and book your electronics repair services">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ERepair">
@@ -597,11 +598,37 @@
                             
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Selfie with ID <span class="text-red-500">*</span></label>
-                                <input type="file" @change="handleFileSelect($event, 'selfie_file')" required
-                                       accept=".jpg,.jpeg,.png"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <p class="text-xs text-gray-500 mt-1">Take a selfie holding your ID next to your face. JPG or PNG only (max 5MB)</p>
+                                <button type="button" 
+                                        @click="openCameraForSelfie()"
+                                        class="w-full px-4 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center gap-2 mb-2">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Take Selfie with ID</span>
+                                </button>
+                                <input type="file" 
+                                       id="shop-owner-selfie-file-input"
+                                       @change="handleFileSelect($event, 'selfie_file')" 
+                                       required
+                                       accept="image/*"
+                                       capture="user"
+                                       class="hidden"
+                                       style="display: none !important;"
+                                       readonly
+                                       disabled>
+                                <p class="text-xs text-gray-500 mt-1">Take a selfie holding your ID next to your face using your camera. JPG or PNG only (max 5MB)</p>
                                 <p class="text-xs text-yellow-600 mt-1"><i class="fas fa-info-circle"></i> This helps us verify your identity</p>
+                                <div x-show="files.selfie_file" class="mt-3">
+                                    <div class="border border-gray-300 rounded-lg p-2">
+                                        <img :src="getFilePreview('selfie_file')" 
+                                             alt="Selfie Preview" 
+                                             class="max-w-full h-auto rounded-md"
+                                             style="max-height: 300px;">
+                                        <button type="button" 
+                                                @click="retakeSelfie()"
+                                                class="mt-2 w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm">
+                                            <i class="fas fa-redo mr-2"></i>Retake Photo
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -620,15 +647,15 @@
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             <p class="text-xs text-gray-500 mt-1">Upload a clear photo of your valid ID (Driver's License, National ID, Passport, etc.). JPG, PNG, or PDF (max 5MB)</p>
                             <div x-show="files.id_file" class="mt-3">
-                                <div x-show="files.id_file.type.startsWith('image/')" class="border border-gray-300 rounded-lg p-2">
+                                <div x-show="files.id_file && files.id_file.type && files.id_file.type.startsWith('image/')" class="border border-gray-300 rounded-lg p-2">
                                     <img :src="getFilePreview('id_file')" 
                                          alt="ID Preview" 
                                          class="max-w-full h-auto rounded-md"
                                          style="max-height: 200px;">
                                 </div>
-                                <div x-show="files.id_file.type === 'application/pdf'" class="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                                <div x-show="files.id_file && files.id_file.type === 'application/pdf'" class="border border-gray-300 rounded-lg p-4 bg-gray-50">
                                     <i class="fas fa-file-pdf text-red-500 text-2xl mb-2"></i>
-                                    <p class="text-sm text-gray-600" x-text="files.id_file.name"></p>
+                                    <p class="text-sm text-gray-600" x-text="files.id_file ? files.id_file.name : ''"></p>
                                 </div>
                             </div>
                         </div>
@@ -1510,6 +1537,15 @@
                                     URL.revokeObjectURL(this.filePreviews.selfie_file);
                                 }
                                 this.filePreviews.selfie_file = URL.createObjectURL(file);
+                                
+                                // Update the hidden input (for form submission)
+                                const input = document.getElementById('shop-owner-selfie-file-input') || document.getElementById('selfie-file-input');
+                                if (input) {
+                                    const dataTransfer = new DataTransfer();
+                                    dataTransfer.items.add(file);
+                                    input.files = dataTransfer.files;
+                                }
+                                
                                 cleanup();
                                 Notiflix.Notify.success('Photo captured successfully!', {
                                     timeout: 2000,
@@ -1556,7 +1592,8 @@
                         URL.revokeObjectURL(this.filePreviews.selfie_file);
                         delete this.filePreviews.selfie_file;
                     }
-                    const input = document.getElementById('selfie-file-input');
+                    // Clear both customer and shop owner input fields
+                    const input = document.getElementById('selfie-file-input') || document.getElementById('shop-owner-selfie-file-input');
                     if (input) {
                         input.value = '';
                     }

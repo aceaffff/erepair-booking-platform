@@ -289,12 +289,12 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                             <p class="mt-1 text-xs text-gray-500">Upload a clear photo of your valid ID (Driver's License, National ID, Passport, etc.). JPG, PNG, or PDF (max 5MB)</p>
                         </div>
                         <div x-show="files.id_file" class="mt-3">
-                            <div x-show="files.id_file.type.startsWith('image/')" class="border border-gray-300 rounded-md p-2">
+                            <div x-show="files.id_file && files.id_file.type && files.id_file.type.startsWith('image/')" class="border border-gray-300 rounded-md p-2">
                                 <img :src="getFilePreview('id_file')" alt="ID Preview" class="max-w-full h-auto rounded-md" style="max-height: 200px;">
                             </div>
-                            <div x-show="files.id_file.type === 'application/pdf'" class="border border-gray-300 rounded-md p-4 bg-gray-50">
+                            <div x-show="files.id_file && files.id_file.type === 'application/pdf'" class="border border-gray-300 rounded-md p-4 bg-gray-50">
                                 <i class="fas fa-file-pdf text-red-500 text-2xl mb-2"></i>
-                                <p class="text-sm text-gray-600" x-text="files.id_file.name"></p>
+                                <p class="text-sm text-gray-600" x-text="files.id_file ? files.id_file.name : ''"></p>
                             </div>
                         </div>
                     </div>

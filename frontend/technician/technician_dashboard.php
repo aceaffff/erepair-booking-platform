@@ -5,7 +5,7 @@ $token = $_COOKIE['auth_token'] ?? ($_GET['token'] ?? '');
 if (!empty($_GET['token'])) setcookie('auth_token', $_GET['token'], time()+86400, '/');
 if (empty($token)) redirect_to_login();
 $db = (new Database())->getConnection();
-$stmt = $db->prepare("SELECT u.id,u.name,u.email,u.phone,u.avatar_url,u.role,t.id AS tech_id FROM users u INNER JOIN sessions s ON s.user_id=u.id INNER JOIN technicians t ON t.user_id=u.id WHERE s.token=? AND s.expires_at>NOW()");
+$stmt = $db->prepare("SELECT u.id,u.name,u.email,u.phone,u.avatar as avatar_url,u.role,t.id AS tech_id FROM users u INNER JOIN sessions s ON s.user_id=u.id INNER JOIN technicians t ON t.user_id=u.id WHERE s.token=? AND s.expires_at>NOW()");
 $stmt->execute([$token]);
 $user=$stmt->fetch();
 if(!$user||$user['role']!=='technician'||empty($user['tech_id'])) redirect_to_login();
@@ -24,6 +24,7 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="ERepair Technician - Manage your repair jobs and schedule">
     <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ERepair Tech">
@@ -44,24 +45,198 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
 </head>
 <body class="bg-light" x-data="techDashboard()">
     <style>
-        .nav-btn { transition: background-color .2s ease, color .2s ease, transform .08s ease; color: rgba(255,255,255,.92); }
-        .nav-btn:hover { background-color: rgba(255,255,255,.06); color: #fff; }
-        .nav-btn.active { background: rgba(99,102,241,.18); color: #8ea2ff; font-weight: 600; box-shadow: inset 0 0 0 1px rgba(99,102,241,.35); }
-        .nav-btn i { width: 22px; text-align: center; opacity: .95; }
-        .nav-btn.active i { color: #8ea2ff; }
-        .logout-btn { color: #ef4444; }
-        .logout-btn:hover { background: rgba(239,68,68,.12); color: #fff; }
-        .brand-wrap { background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)); border-bottom: 1px solid rgba(255,255,255,.06); }
+        .nav-btn { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            color: rgba(255,255,255,.85); 
+            position: relative;
+            border-radius: 12px;
+            margin-bottom: 4px;
+        }
+        .nav-btn::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 0;
+            background: linear-gradient(180deg, #6366f1, #8b5cf6);
+            border-radius: 0 4px 4px 0;
+            transition: height 0.3s ease;
+        }
+        .nav-btn:hover { 
+            background: linear-gradient(90deg, rgba(99,102,241,.12), rgba(99,102,241,.06)); 
+            color: #fff; 
+            transform: translateX(4px);
+            padding-left: 1.5rem;
+        }
+        .nav-btn:hover::before {
+            height: 60%;
+        }
+        .nav-btn.active { 
+            background: linear-gradient(90deg, rgba(99,102,241,.25), rgba(99,102,241,.15)); 
+            color: #a5b4fc; 
+            font-weight: 600; 
+            box-shadow: 0 4px 12px rgba(99,102,241,.2);
+            border-left: 3px solid #6366f1;
+            padding-left: 1.5rem;
+        }
+        .nav-btn.active::before {
+            height: 70%;
+            width: 4px;
+        }
+        .nav-btn i { 
+            width: 22px; 
+            text-align: center; 
+            opacity: .9;
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover i {
+            transform: scale(1.1);
+            opacity: 1;
+        }
+        .nav-btn.active i { 
+            color: #a5b4fc; 
+            transform: scale(1.15);
+        }
+        .logout-btn { 
+            color: #f87171; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px;
+            margin-top: 8px;
+            position: relative;
+        }
+        .logout-btn::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 0;
+            background: linear-gradient(180deg, #ef4444, #f87171);
+            border-radius: 0 4px 4px 0;
+            transition: height 0.3s ease;
+        }
+        .logout-btn:hover { 
+            background: linear-gradient(90deg, rgba(239,68,68,.15), rgba(239,68,68,.08)); 
+            color: #fff; 
+            transform: translateX(4px);
+            padding-left: 1.5rem;
+        }
+        .logout-btn:hover::before {
+            height: 60%;
+        }
+        .logout-btn i {
+            transition: transform 0.3s ease;
+        }
+        .logout-btn:hover i {
+            transform: translateX(-2px);
+        }
+        .brand-wrap { 
+            background: linear-gradient(180deg, rgba(99,102,241,.08), rgba(99,102,241,.03)); 
+            border-bottom: 1px solid rgba(99,102,241,.15); 
+            position: relative;
+            overflow: hidden;
+        }
+        .brand-wrap::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(99,102,241,.5), transparent);
+        }
         .bg-gradient-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); }
         .logo-container { transition: transform 0.3s ease; }
         .logo-container:hover { transform: scale(1.05); }
-        /* Inline form styles for change password */
-        .change-password-form {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(99, 102, 241, 0.2);
+        /* Modern Form Input Styling */
+        .form-control-lg.border-2 {
             transition: all 0.3s ease;
         }
+        
+        .form-control-lg.border-2:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15) !important;
+            transform: translateY(-1px);
+        }
+        
+        .form-control-lg.border-2:hover:not(:disabled):not(:focus) {
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        /* Profile Card Enhancements */
+        .card.shadow-lg {
+            transition: all 0.3s ease;
+        }
+        
+        .card.shadow-lg:hover {
+            box-shadow: 0 15px 50px rgba(0,0,0,0.12) !important;
+        }
+        
+        /* Button Enhancements */
+        .btn[style*="border-radius: 25px"] {
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn[style*="border-radius: 25px"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        
+        .btn-primary[style*="border-radius: 25px"]:hover {
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Profile Photo Hover Effect */
+        .card-body img.rounded-circle {
+            transition: all 0.3s ease;
+        }
+        
+        .card-body:hover img.rounded-circle {
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3) !important;
+        }
+        
+        /* Icon Container Hover */
+        .bg-primary.bg-opacity-10.rounded-circle {
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover .bg-primary.bg-opacity-10.rounded-circle {
+            background-color: rgba(99, 102, 241, 0.15) !important;
+            transform: scale(1.1);
+        }
+        
+        /* Modern Notification Cards */
+        .modern-notification-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+        }
+        
+        .modern-notification-card:hover {
+            transform: translateX(8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+            border-left-color: rgba(99, 102, 241, 0.5) !important;
+        }
+        
+        .modern-notification-card.border-primary {
+            background: linear-gradient(90deg, rgba(99,102,241,0.03) 0%, rgba(255,255,255,1) 100%);
+        }
+        
+        /* Notification Icon Animation */
+        .modern-notification-card:hover .rounded-circle {
+            transform: scale(1.1);
+            transition: transform 0.3s ease;
+        }
+        
+        /* Space between notifications */
+        .space-y-3 > * + * {
+            margin-top: 1rem;
+        }
+        
         /* Stats card animations */
         .glass-advanced {
             transition: all 0.3s ease;
@@ -123,19 +298,19 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
         }
         /* Day card hover effects */
         .schedule-day-card {
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .schedule-day-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15) !important;
         }
         /* Job card animations */
         .job-card {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .job-card:hover {
-            transform: translateX(4px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateX(6px) translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12) !important;
         }
         /* Chart container fixes */
         #tech-status-chart, #tech-timeline-chart {
@@ -182,7 +357,61 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
         
         /* Main content margin for fixed sidebar */
         .main-content {
-            margin-left: 260px;
+            margin-left: 280px;
+        }
+        
+        /* Sidebar scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 3px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+        
+        /* Pulse animation for status indicator */
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(0.95); }
+        }
+        
+        /* Smooth sidebar transitions */
+        .sidebar {
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Enhanced logo hover effect */
+        .logo-container {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .logo-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+        
+        .logo-container:hover::before {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .animate-pulse {
+            animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
         
         @media (max-width: 768px) {
@@ -192,18 +421,26 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
             
             .sidebar {
                 position: fixed !important;
-                left: -260px !important;
-                transition: left 0.3s ease;
-                z-index: 1050;
+                left: -280px !important;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                z-index: 1050 !important;
                 height: 100vh;
+                width: 280px !important;
+                pointer-events: none;
             }
             
             .sidebar.open {
                 left: 0 !important;
+                pointer-events: auto !important;
+            }
+            
+            .sidebar-overlay {
+                z-index: 1040 !important;
             }
             
             .sidebar-overlay.show {
                 display: block !important;
+                pointer-events: auto !important;
             }
             
             .main-content {
@@ -227,167 +464,216 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
     
     <div class="d-flex">
         <!-- Sidebar -->
-        <div class="sidebar shadow-md min-vh-100 text-white" :class="{ 'open': sidebarOpen }" style="position: fixed; left: 0; width:260px; background-color:#0b1220; top: 0; height: 100vh; overflow-y: auto; z-index: 1000;">
+        <div class="sidebar shadow-md min-h-screen text-white" :class="{ 'open': sidebarOpen }" style="position: fixed; left: 0; width: 280px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); top: 0; height: 100vh; overflow-y: auto; z-index: 1050; border-right: 1px solid rgba(99,102,241,.2);">
             <div class="p-4 brand-wrap">
-                <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="bg-gradient-primary rounded-circle d-flex align-items-center justify-content-center logo-container" style="width: 48px; height: 48px;">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <div class="bg-gradient-primary rounded-circle d-flex align-items-center justify-content-center logo-container shadow-lg" style="width: 52px; height: 52px; box-shadow: 0 4px 15px rgba(99,102,241,.4);">
                         <i class="fas fa-screwdriver-wrench text-white fs-5"></i>
                     </div>
                     <div>
-                        <h2 class="text-xl fw-bold m-0" style="letter-spacing:.3px; color: #ffffff;">ERepair</h2>
-                        <div class="small text-white-50">Technician Portal</div>
+                        <h2 class="text-xl fw-bold m-0" style="letter-spacing:.3px; color: #ffffff; text-shadow: 0 2px 8px rgba(0,0,0,.3);">ERepair</h2>
+                        <div class="small" style="color: rgba(255,255,255,.7);">Technician Portal</div>
                     </div>
                 </div>
                 <div class="text-center">
-                    <div class="position-relative d-inline-block">
-                        <img :src="avatarUrl" 
-                             class="rounded-circle border d-block mx-auto" 
-                             style="width:64px;height:64px;object-fit:cover;" 
-                             alt="Avatar">
+                    <div class="position-relative d-inline-block mb-3">
+                        <div class="position-relative">
+                            <img :src="avatarUrl" alt="Avatar" class="rounded-circle border border-3 d-block mx-auto shadow-lg" style="width:80px;height:80px;object-fit:cover; border-color: rgba(99,102,241,.4) !important; box-shadow: 0 4px 20px rgba(99,102,241,.3);">
                         <!-- Auto-refresh indicator -->
-                        <div x-show="isPollingActive" class="position-absolute bottom-0 end-0 bg-success rounded-circle" style="width: 16px; height: 16px; border: 2px solid #0b1220;" title="Auto-refresh active"></div>
+                            <div x-show="isPollingActive" class="position-absolute bottom-0 end-0 bg-success rounded-circle shadow-sm" style="width: 18px; height: 18px; border: 3px solid #0f172a; animation: pulse-dot 2s infinite;" title="Active connection"></div>
                     </div>
-                    <div class="fw-semibold small mt-2 text-white" style="color:#ffffff !important;">
+                    </div>
+                    <div class="fw-bold mb-1" style="color:#ffffff !important; font-size: 1rem;">
                         <?php echo h($user['name']); ?>
                     </div>
-                    <div class="d-flex gap-2 justify-content-center mt-2">
-                        <button class="btn btn-sm btn-outline-light" @click="section='profile'; sidebarOpen = false"><i class="fas fa-user-pen me-1"></i>Edit profile</button>
-                        <button class="btn btn-sm btn-outline-light position-relative" @click="section='notifications'; sidebarOpen = false; loadNotifications()">
+                    <div class="d-flex gap-2 justify-content-center mt-3">
+                        <button class="btn btn-sm btn-outline-light border-2 px-3" style="border-radius: 20px; transition: all 0.3s ease;" @click="section='profile'; sidebarOpen = false" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(255,255,255,.2)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
+                            <i class="fas fa-user-edit me-1"></i>Edit profile
+                        </button>
+                        <button class="btn btn-sm btn-outline-light border-2 position-relative px-3" style="border-radius: 20px; transition: all 0.3s ease;" @click="section='notifications'; sidebarOpen = false; loadNotifications()" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(255,255,255,.2)'" onmouseout="this.style.transform=''; this.style.boxShadow=''">
                             <i class="fas fa-bell"></i>
-                            <span x-show="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" x-text="unreadCount" style="font-size: 0.6rem;"></span>
+                            <span x-show="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger animate-pulse" x-text="unreadCount" style="font-size: 0.65rem; padding: 2px 6px;"></span>
                         </button>
                     </div>
-                   
                 </div>
             </div>
-            <ul class="list-unstyled p-3">
+            <ul class="list-unstyled px-3 pb-3 space-y-2" style="margin-top: 1rem;">
                 <li>
-                    <button class="nav-btn w-100 text-start px-3 py-2 rounded" :class="{ 'active': section==='home' }" @click="section='home'; sidebarOpen = false">
-                        <i class="fas fa-home me-2"></i>Home
+                    <button class="nav-btn w-100 text-start px-4 py-3" :class="{ 'active': section==='home' }" @click="section='home'; sidebarOpen = false">
+                        <i class="fas fa-home me-3"></i><span>Home</span>
                     </button>
                 </li>
-                <li class="mt-2">
-                    <button class="nav-btn w-100 text-start px-3 py-2 rounded" :class="{ 'active': section==='jobs' }" @click="section='jobs'; sidebarOpen = false; jobStatusFilter='all'; renderJobs();">
-                        <i class="fas fa-briefcase me-2"></i>My Jobs
+                <li>
+                    <button class="nav-btn w-100 text-start px-4 py-3" :class="{ 'active': section==='jobs' }" @click="section='jobs'; sidebarOpen = false; jobStatusFilter='all'; renderJobs();">
+                        <i class="fas fa-briefcase me-3"></i><span>My Jobs</span>
                     </button>
                 </li>
-                <li class="mt-2">
-                    <button class="nav-btn w-100 text-start px-3 py-2 rounded" :class="{ 'active': section==='schedule' }" @click="section='schedule'; sidebarOpen = false; renderSchedule();">
-                        <i class="fas fa-calendar-week me-2"></i>My Schedule
+                <li>
+                    <button class="nav-btn w-100 text-start px-4 py-3" :class="{ 'active': section==='schedule' }" @click="section='schedule'; sidebarOpen = false; renderSchedule();">
+                        <i class="fas fa-calendar-week me-3"></i><span>My Schedule</span>
                     </button>
                 </li>
-                <li class="mt-2">
-                    <button class="nav-btn w-100 text-start px-3 py-2 rounded" :class="{ 'active': section==='completed' }" @click="section='completed'; sidebarOpen = false; renderCompletedJobs();">
-                        <i class="fas fa-check-circle me-2"></i>Completed Jobs
+                <li>
+                    <button class="nav-btn w-100 text-start px-4 py-3" :class="{ 'active': section==='completed' }" @click="section='completed'; sidebarOpen = false; renderCompletedJobs();">
+                        <i class="fas fa-check-circle me-3"></i><span>Completed Jobs</span>
                     </button>
                 </li>
-                <li class="mt-2">
-                    <button class="w-100 text-start px-3 py-2 rounded logout-btn" @click="logout()">
-                        <i class="fas fa-right-from-bracket me-2"></i>Logout
+                <li>
+                    <button class="nav-btn w-100 text-start px-4 py-3" :class="{ 'active': section==='reviews' }" @click="section='reviews'; sidebarOpen = false; loadReviews();">
+                        <i class="fas fa-star me-3"></i><span>My Reviews</span>
+                    </button>
+                </li>
+                <li style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(99,102,241,.2);">
+                    <button class="w-100 text-start px-4 py-3 logout-btn" @click="logout()">
+                        <i class="fas fa-right-from-bracket me-3"></i><span>Logout</span>
                     </button>
                 </li>
             </ul>
         </div>
         <div class="flex-1 w-100 main-content">
             <div class="container py-4">
-                <div x-show="section==='home'">
-                    <!-- Welcome Header -->
-                    <div class="glass-advanced rounded border p-4 mb-4" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);">
-                        <div class="d-flex justify-content-between align-items-center">
+                <div x-show="section==='home'" 
+                     x-transition:enter="transition ease-out duration-300" 
+                     x-transition:enter-start="opacity-0 transform translate-y-4" 
+                     x-transition:enter-end="opacity-100 transform translate-y-0">
+                    <!-- Modern Welcome Header -->
+                    <div class="card border-0 shadow-lg mb-4 overflow-hidden" style="background: linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(168,85,247,0.1) 100%);">
+                        <div class="card-body p-4 p-md-5">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-tools text-primary fs-4"></i>
+                                    </div>
                             <div>
-                                <h4 class="neon-text mb-2">Welcome Back, <?php echo h($user['name']); ?>!</h4>
-                                <p class="text-muted mb-0"><i class="fas fa-clock me-2"></i>Today is <?php echo date('l, F j, Y'); ?></p>
+                                        <h2 class="h4 fw-bold mb-1 text-dark">Welcome back, <?php echo h($user['name']); ?>!</h2>
+                                        <p class="text-muted small mb-0">Here's your job overview and performance metrics</p>
                             </div>
-                            <div class="text-end">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="fas fa-calendar-check text-primary fa-2x"></i>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <button class="btn btn-primary btn-sm shadow-sm px-4" style="border-radius: 25px; font-weight: 500;" @click="loadStats(); renderJobs(); renderSchedule();">
+                                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap" style="border-top: 1px solid rgba(99,102,241,0.1); padding-top: 1rem;">
+                                <div class="d-flex align-items-center gap-2 text-muted small">
+                                    <i class="fas fa-clock text-primary"></i>
+                                    <span>Today is <?php echo date('l, F j, Y'); ?></span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Stats Cards -->
-                    <div class="row g-3 mb-4" id="tech-stats">
+                    <!-- Modern Stats Cards -->
+                    <div class="row g-4 mb-4" id="tech-stats">
                         <div class="col-6 col-md-3">
-                            <div class="glass-advanced rounded border p-4 h-100" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(37, 99, 235, 0.05) 100%); border-left: 4px solid #3b82f6;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="small text-muted mb-2">Total Jobs</div>
-                                        <div class="h3 fw-bold text-primary mb-0" id="st-total">0</div>
+                            <div class="card border-0 shadow-sm h-100 modern-stat-card" 
+                                 style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.05) 100%); border-left: 4px solid #3b82f6 !important; transition: all 0.3s ease; cursor: pointer;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 25px rgba(59, 130, 246, 0.25) !important';"
+                                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="flex-grow-1">
+                                            <div class="text-muted small mb-2 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Total Jobs</div>
+                                            <div class="h2 fw-bold text-primary mb-2" id="st-total" style="font-size: 2rem;">0</div>
                                     </div>
-                                    <div class="bg-blue-100 rounded-circle p-3">
-                                        <i class="fas fa-briefcase text-primary"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-advanced rounded border p-4 h-100" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.05) 0%, rgba(22, 163, 74, 0.05) 100%); border-left: 4px solid #22c55e;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="small text-muted mb-2">Completed</div>
-                                        <div class="h3 fw-bold text-success mb-0" id="st-completed">0</div>
-                                    </div>
-                                    <div class="bg-green-100 rounded-circle p-3">
-                                        <i class="fas fa-check-circle text-success"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-advanced rounded border p-4 h-100" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.05) 0%, rgba(202, 138, 4, 0.05) 100%); border-left: 4px solid #eab308;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="small text-muted mb-2">In Progress</div>
-                                        <div class="h3 fw-bold text-warning mb-0" id="st-inprog">0</div>
-                                    </div>
-                                    <div class="bg-yellow-100 rounded-circle p-3">
-                                        <i class="fas fa-spinner text-warning"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-3">
-                            <div class="glass-advanced rounded border p-4 h-100" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%); border-left: 4px solid #a855f7;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="small text-muted mb-2">Pending</div>
-                                        <div class="h3 fw-bold text-purple mb-0" id="st-pending" style="color: #a855f7;">0</div>
-                                    </div>
-                                    <div class="rounded-circle p-3" style="background-color: rgba(168, 85, 247, 0.1);">
-                                        <i class="fas fa-clock" style="color: #a855f7;"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Earnings & Performance -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-12 col-lg-4">
-                            <div class="glass-advanced rounded border p-4 h-100" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(5, 150, 105, 0.05) 100%);">
-                                <div class="d-flex align-items-center justify-content-between mb-3">
-                                    <h6 class="mb-0"><i class="fas fa-wallet text-success me-2"></i>Total Earnings</h6>
-                                    <i class="fas fa-arrow-trend-up text-success"></i>
-                                </div>
-                                <div class="h2 fw-bold text-success mb-2">₱<span id="st-earnings">0.00</span></div>
-                                <div class="small text-muted">From completed jobs</div>
-                            </div>
-                        </div>
-                        <div class="col-12 col-lg-8">
-                            <div class="glass-advanced rounded border p-4 h-100">
-                                <h6 class="mb-3"><i class="fas fa-chart-line text-primary me-2"></i>Performance Overview</h6>
-                                <div class="row g-3">
-                                    <div class="col-6">
-                                        <div class="text-center p-3 rounded" style="background-color: rgba(59, 130, 246, 0.1);">
-                                            <div class="h4 fw-bold text-primary mb-1" id="st-completion-rate">0%</div>
-                                            <div class="small text-muted">Completion Rate</div>
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; transition: all 0.3s ease;">
+                                            <i class="fas fa-briefcase text-primary" style="font-size: 1.5rem;"></i>
                                         </div>
                                     </div>
-                                    <div class="col-6">
-                                        <div class="text-center p-3 rounded" style="background-color: rgba(34, 197, 94, 0.1);">
-                                            <div class="h4 fw-bold text-success mb-1" id="st-avg-earnings">₱0</div>
-                                            <div class="small text-muted">Avg per Job</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card border-0 shadow-sm h-100 modern-stat-card" 
+                                 style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(22, 163, 74, 0.05) 100%); border-left: 4px solid #22c55e !important; transition: all 0.3s ease; cursor: pointer;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 25px rgba(34, 197, 94, 0.25) !important';"
+                                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="flex-grow-1">
+                                            <div class="text-muted small mb-2 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Completed</div>
+                                            <div class="h2 fw-bold text-success mb-2" id="st-completed" style="font-size: 2rem;">0</div>
+                                    </div>
+                                        <div class="bg-success bg-opacity-10 rounded-circle p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px; transition: all 0.3s ease;">
+                                            <i class="fas fa-check-circle text-success" style="font-size: 1.5rem;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card border-0 shadow-sm h-100 modern-stat-card" 
+                                 style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(202, 138, 4, 0.05) 100%); border-left: 4px solid #eab308 !important; transition: all 0.3s ease; cursor: pointer;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 25px rgba(234, 179, 8, 0.25) !important';"
+                                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="flex-grow-1">
+                                            <div class="text-muted small mb-2 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">In Progress</div>
+                                            <div class="h2 fw-bold mb-2" id="st-inprog" style="color: #eab308; font-size: 2rem;">0</div>
+                                    </div>
+                                        <div class="rounded-circle p-3 d-flex align-items-center justify-content-center" style="background-color: rgba(234, 179, 8, 0.15); width: 56px; height: 56px; transition: all 0.3s ease;">
+                                            <i class="fas fa-spinner" style="color: #eab308; font-size: 1.5rem;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="card border-0 shadow-sm h-100 modern-stat-card" 
+                                 style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.08) 0%, rgba(147, 51, 234, 0.05) 100%); border-left: 4px solid #a855f7 !important; transition: all 0.3s ease; cursor: pointer;"
+                                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 25px rgba(168, 85, 247, 0.25) !important';"
+                                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="flex-grow-1">
+                                            <div class="text-muted small mb-2 fw-semibold text-uppercase" style="letter-spacing: 0.5px; font-size: 0.7rem;">Pending</div>
+                                            <div class="h2 fw-bold mb-2" id="st-pending" style="color: #a855f7; font-size: 2rem;">0</div>
+                                    </div>
+                                        <div class="rounded-circle p-3 d-flex align-items-center justify-content-center" style="background-color: rgba(168, 85, 247, 0.15); width: 56px; height: 56px; transition: all 0.3s ease;">
+                                            <i class="fas fa-clock" style="color: #a855f7; font-size: 1.5rem;"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Performance Overview & Rating -->
+                    <div class="row g-4 mb-4">
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center gap-2 mb-4">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-chart-line text-primary"></i>
+                                </div>
+                                        <h5 class="mb-0 fw-bold">Performance Overview</h5>
+                            </div>
+                                    <div class="text-center p-4 rounded" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);">
+                                        <div class="h2 fw-bold text-primary mb-2" id="st-completion-rate">0%</div>
+                                        <div class="text-muted fw-semibold">Completion Rate</div>
+                        </div>
+                                        </div>
+                                    </div>
+                                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center gap-2 mb-4">
+                                        <div class="bg-warning bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-star text-warning"></i>
+                                    </div>
+                                        <h5 class="mb-0 fw-bold">Average Rating</h5>
+                                </div>
+                                    <div class="text-center p-4 rounded" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(202, 138, 4, 0.05) 100%);">
+                                        <div class="h2 fw-bold mb-2" id="tech-average-rating" style="color: #eab308;">0.0</div>
+                                        <div class="mb-2">
+                                            <span id="tech-rating-stars" class="text-warning"></span>
+                                        </div>
+                                        <div class="text-muted fw-semibold">
+                                            <span id="tech-total-reviews">0</span> reviews
                                         </div>
                                     </div>
                                 </div>
@@ -396,34 +682,153 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                     </div>
 
                     <!-- Charts Section -->
-                    <div class="row g-3">
+                    <div class="row g-4">
                         <div class="col-12 col-lg-6">
-                            <div class="glass-advanced rounded border p-3">
-                                <h6 class="mb-2"><i class="fas fa-chart-pie text-primary me-2"></i>Jobs by Status</h6>
-                                <div class="chart-container">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center gap-2 mb-4">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-chart-pie text-primary"></i>
+                                        </div>
+                                        <h5 class="mb-0 fw-bold">Jobs by Status</h5>
+                                    </div>
+                                    <div class="position-relative" style="height: 250px; overflow: hidden;">
                                     <canvas id="tech-status-chart"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-12 col-lg-6">
-                            <div class="glass-advanced rounded border p-3">
-                                <h6 class="mb-2"><i class="fas fa-chart-bar text-success me-2"></i>Jobs Timeline (Last 7 Days)</h6>
-                                <div class="chart-container">
+                            <div class="card border-0 shadow-sm h-100">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-center gap-2 mb-4">
+                                        <div class="bg-success bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-chart-bar text-success"></i>
+                                        </div>
+                                        <h5 class="mb-0 fw-bold">Jobs Timeline (Last 7 Days)</h5>
+                                    </div>
+                                    <div class="position-relative" style="height: 250px; overflow: hidden;">
                                     <canvas id="tech-timeline-chart"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Recent Activity -->
-                    <div class="glass-advanced rounded border p-4 mt-4">
-                        <h6 class="mb-3"><i class="fas fa-history text-warning me-2"></i>Recent Activity</h6>
+                    <div class="card border-0 shadow-sm mt-4">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center gap-2 mb-4">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-history text-warning"></i>
+                                </div>
+                                <h5 class="mb-0 fw-bold">Recent Activity</h5>
+                            </div>
                         <div id="recent-activity">
                             <div class="text-center py-4 text-muted">
                                 <i class="fas fa-clock fa-2x mb-2 opacity-50"></i>
                                 <p class="mb-0">No recent activity</p>
                             </div>
                         </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reviews Section -->
+                <div x-show="section==='reviews'" class="glass-advanced rounded border p-4 mt-4" 
+                     x-transition:enter="transition ease-out duration-300" 
+                     x-transition:enter-start="opacity-0 transform translate-y-4" 
+                     x-transition:enter-end="opacity-100 transform translate-y-0">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h5 class="neon-text mb-1"><i class="fas fa-star text-warning me-2"></i>My Reviews</h5>
+                            <small class="text-muted">View all customer reviews and ratings</small>
+                        </div>
+                        <button class="btn btn-primary btn-sm shadow-sm px-4" style="border-radius: 25px; font-weight: 500;" @click="loadReviews()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                    </div>
+                    
+                    <!-- Rating Summary -->
+                    <div class="row g-3 mb-4" x-show="reviewsData && reviewsData.rating">
+                        <div class="col-12 col-md-4">
+                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.08) 0%, rgba(202, 138, 4, 0.05) 100%); border-left: 4px solid #eab308;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="h2 fw-bold mb-2" style="color: #eab308;" x-text="reviewsData.rating.average_rating || '0.0'">0.0</div>
+                                    <div class="mb-2">
+                                        <template x-for="i in 5" :key="i">
+                                            <i class="fas fa-star" :class="i <= Math.round(reviewsData.rating.average_rating || 0) ? 'text-warning' : 'text-muted'"></i>
+                                        </template>
+                                    </div>
+                                    <div class="text-muted small">Average Rating</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.05) 100%); border-left: 4px solid #3b82f6;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="h2 fw-bold text-primary mb-2" x-text="reviewsData.rating.total_reviews || 0">0</div>
+                                    <div class="text-muted small">Total Reviews</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(22, 163, 74, 0.05) 100%); border-left: 4px solid #22c55e;">
+                                <div class="card-body p-4 text-center">
+                                    <div class="h2 fw-bold text-success mb-2" x-text="reviewsData.reviews ? reviewsData.reviews.length : 0">0</div>
+                                    <div class="text-muted small">Reviews Displayed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reviews List -->
+                    <div x-show="reviewsData && reviewsData.reviews && reviewsData.reviews.length > 0">
+                        <template x-for="(review, index) in reviewsData.reviews" :key="review.id">
+                            <div class="card border-0 shadow-sm mb-3 modern-review-card" 
+                                 style="transition: all 0.3s ease; border-left: 4px solid rgba(234, 179, 8, 0.5);"
+                                 onmouseover="this.style.transform='translateX(4px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)';"
+                                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+                                <div class="card-body p-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="rounded-circle bg-warning bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                <i class="fas fa-user text-warning"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-1 fw-bold" x-text="review.customer_name || 'Anonymous'">Customer</h6>
+                                                <div class="d-flex align-items-center gap-2 mb-1">
+                                                    <template x-for="i in 5" :key="i">
+                                                        <i class="fas fa-star" :class="i <= review.rating ? 'text-warning' : 'text-muted'" style="font-size: 0.9rem;"></i>
+                                                    </template>
+                                                    <span class="ms-2 fw-semibold" x-text="review.rating + '/5'"></span>
+                                                </div>
+                                                <small class="text-muted" x-text="formatDate(review.created_at)"></small>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="badge bg-primary bg-opacity-10 text-primary px-3 py-2" x-text="review.shop_name || 'Shop'"></div>
+                                        </div>
+                                    </div>
+                                    <div x-show="review.comment" class="mt-3">
+                                        <p class="mb-0 text-dark" x-text="review.comment"></p>
+                                    </div>
+                                    <div x-show="review.device_description" class="mt-2">
+                                        <small class="text-muted">
+                                            <i class="fas fa-mobile-alt me-1"></i>
+                                            <span x-text="review.device_description"></span>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div x-show="!reviewsData || !reviewsData.reviews || reviewsData.reviews.length === 0" class="text-center py-5">
+                        <i class="fas fa-star fa-3x text-muted mb-3 opacity-50"></i>
+                        <h6 class="text-muted mb-2">No Reviews Yet</h6>
+                        <p class="text-muted small mb-0">You haven't received any reviews from customers yet.</p>
                     </div>
                 </div>
                 <div x-show="section==='jobs'" class="glass-advanced rounded border p-4 mt-4">
@@ -515,155 +920,339 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                         </div>
                     </div>
                 </div>
-                <div x-show="section==='profile'" class="glass-advanced rounded border p-4 mt-4">
-                    <h6 class="mb-3 neon-text">Profile</h6>
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <img :src="avatarUrl" alt="Avatar" class="rounded-circle border" style="width:72px;height:72px;object-fit:cover;">
+                <!-- Profile Section -->
+                <div x-show="section==='profile'" class="mt-4" 
+                     x-transition:enter="transition ease-out duration-300" 
+                     x-transition:enter-start="opacity-0 transform translate-y-4" 
+                     x-transition:enter-end="opacity-100 transform translate-y-0">
+                    <!-- Modern Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <div class="small text-muted mb-1">Update profile photo</div>
-                            <input type="file" accept="image/*" x-ref="avatarInput" class="d-none" @change="onAvatarChange($event)">
-                            <button type="button" class="btn btn-outline-primary btn-sm" @click="$refs.avatarInput.click()"><i class="fas fa-image me-1"></i>Change Photo</button>
+                            <h2 class="h4 fw-bold mb-1 neon-text d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-user-circle text-primary"></i>
+                                </div>
+                                <span>Profile Settings</span>
+                            </h2>
+                            <p class="text-muted small mb-0">Manage your account information and preferences</p>
                         </div>
                     </div>
+                    
+                    <!-- Profile Photo Card -->
+                    <div class="card border-0 shadow-lg mb-4 overflow-hidden" style="background: linear-gradient(135deg, rgba(99,102,241,0.05) 0%, rgba(255,255,255,1) 100%);">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center gap-4">
+                                <div class="position-relative">
+                                    <img :src="avatarUrl" alt="Avatar" class="rounded-circle border border-3 shadow-lg" style="width: 100px; height: 100px; object-fit: cover; border-color: rgba(99,102,241,0.3) !important;">
+                                    <div x-show="isPollingActive" class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-3 border-white shadow-sm" style="width: 24px; height: 24px;" title="Active"></div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h5 class="fw-bold mb-1 text-dark">Profile Photo</h5>
+                                    <p class="text-muted small mb-3">Upload a new profile picture. Recommended size: 200x200px</p>
+                            <input type="file" accept="image/*" x-ref="avatarInput" class="d-none" @change="onAvatarChange($event)">
+                                    <button type="button" class="btn btn-primary btn-sm px-4" @click="$refs.avatarInput.click()" style="border-radius: 20px;">
+                                        <i class="fas fa-camera me-2"></i>Change Photo
+                                    </button>
+                        </div>
+                    </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Profile Information Card -->
+                    <div class="card border-0 shadow-lg mb-4">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <i class="fas fa-user-edit text-primary"></i>
+                                <span>Personal Information</span>
+                            </h5>
+                        </div>
+                        <div class="card-body p-4">
                     <form @submit.prevent="saveProfile">
-                        <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Email</label><input type="email" class="form-control" x-model="profile.email" disabled></div>
+                                <div class="row g-4">
                             <div class="col-md-6">
-                                <label class="form-label">Name</label>
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-envelope text-primary"></i>
+                                            <span>Email Address</span>
+                                        </label>
+                                        <div class="position-relative">
+                                            <input type="email" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
+                                                   x-model="profile.email" 
+                                                   disabled
+                                                   style="background-color: #f8f9fa;">
+                                            <i class="fas fa-envelope position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        </div>
+                                        <small class="text-muted d-flex align-items-center gap-1 mt-2">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Email cannot be changed</span>
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-user text-primary"></i>
+                                            <span>Full Name <span class="text-danger">*</span></span>
+                                        </label>
+                                        <div class="position-relative">
                                 <input type="text" 
-                                       class="form-control" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
                                        x-model="profile.name"
                                        @input="sanitizeTechnicianName($event)"
                                        maxlength="100"
+                                                   placeholder="Enter your full name"
                                        required>
+                                            <i class="fas fa-user position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Phone</label>
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-phone text-primary"></i>
+                                            <span>Phone Number</span>
+                                        </label>
+                                        <div class="position-relative">
                                 <input type="tel" 
-                                       class="form-control" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
                                        x-model="profile.phone"
                                        @input="sanitizeTechnicianPhone($event)"
                                        pattern="^09[0-9]{9}$"
                                        maxlength="11"
                                        minlength="11"
                                        placeholder="09XXXXXXXXX">
+                                            <i class="fas fa-phone position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                             </div>
+                                        <small class="text-muted d-flex align-items-center gap-1 mt-2">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Format: 09XXXXXXXXX (11 digits)</span>
+                                        </small>
                         </div>
-                        <div class="mt-3 d-flex gap-2">
-                            <button class="btn btn-primary">Save Changes</button>
-                            <button type="button" class="btn btn-outline-primary" @click="showChangePassword = !showChangePassword">
+                                </div>
+                                <div class="mt-4 pt-4 border-top d-flex flex-wrap gap-3">
+                                    <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm" style="border-radius: 25px;">
+                                        <i class="fas fa-save me-2"></i>Save Changes
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary px-5 py-2" style="border-radius: 25px;" @click="showChangePassword = !showChangePassword">
+                                        <i class="fas fa-key me-2"></i>
                                 <span x-show="!showChangePassword">Change Password</span>
                                 <span x-show="showChangePassword">Hide Password Form</span>
                             </button>
                         </div>
                     </form>
+                        </div>
+                    </div>
 
-                    <!-- Change Password Inline Form -->
+                    <!-- Change Password Card -->
                     <div x-show="showChangePassword" 
                          x-transition:enter="transition ease-out duration-300"
-                         x-transition:enter-start="opacity-0 transform scale-95"
-                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:enter-start="opacity-0 transform translate-y-4"
+                         x-transition:enter-end="opacity-100 transform translate-y-0"
                          x-transition:leave="transition ease-in duration-200"
-                         x-transition:leave-start="opacity-100 transform scale-100"
-                         x-transition:leave-end="opacity-0 transform scale-95"
-                         class="mt-4 change-password-form rounded border border-gray-200 p-4">
-                        <h5 class="mb-3 neon-text">Change Password</h5>
+                         x-transition:leave-start="opacity-100 transform translate-y-0"
+                         x-transition:leave-end="opacity-0 transform translate-y-4"
+                         class="card border-0 shadow-lg">
+                        <div class="card-header bg-white border-0 pt-4 px-4 pb-3">
+                            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-key text-warning"></i>
+                                </div>
+                                <span>Change Password</span>
+                            </h5>
+                            <p class="text-muted small mb-0 mt-2">Update your password to keep your account secure</p>
+                        </div>
+                        <div class="card-body p-4">
                         <form @submit.prevent="submitChangePassword($refs.oldPwd.value, $refs.newPwd.value, $refs.confirmPwd.value)">
-                            <div class="row g-3">
+                                <div class="row g-4">
                                 <div class="col-md-4">
-                                    <label class="form-label">Current Password</label>
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-lock text-primary"></i>
+                                            <span>Current Password <span class="text-danger">*</span></span>
+                                        </label>
+                                        <div class="position-relative">
                                     <input type="password" 
-                                           class="form-control" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
                                            x-ref="oldPwd" 
                                            @input="sanitizePassword($event, $refs.oldPwd)"
+                                                   placeholder="Enter current password"
                                            required>
+                                            <i class="fas fa-lock position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">New Password</label>
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-key text-primary"></i>
+                                            <span>New Password <span class="text-danger">*</span></span>
+                                        </label>
+                                        <div class="position-relative">
                                     <input type="password" 
-                                           class="form-control" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
                                            x-ref="newPwd" 
                                            @input="sanitizePassword($event, $refs.newPwd)"
                                            minlength="6"
                                            maxlength="128"
+                                                   placeholder="Enter new password"
                                            required>
+                                            <i class="fas fa-key position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                                        </div>
+                                        <small class="text-muted d-flex align-items-center gap-1 mt-2">
+                                            <i class="fas fa-info-circle"></i>
+                                            <span>Minimum 6 characters</span>
+                                        </small>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Confirm New Password</label>
+                                        <label class="form-label fw-semibold mb-2 d-flex align-items-center gap-2">
+                                            <i class="fas fa-shield-alt text-primary"></i>
+                                            <span>Confirm Password <span class="text-danger">*</span></span>
+                                        </label>
+                                        <div class="position-relative">
                                     <input type="password" 
-                                           class="form-control" 
+                                                   class="form-control form-control-lg border-2 ps-5" 
                                            x-ref="confirmPwd" 
                                            @input="sanitizePassword($event, $refs.confirmPwd)"
                                            minlength="6"
                                            maxlength="128"
+                                                   placeholder="Confirm new password"
                                            required>
+                                            <i class="fas fa-shield-alt position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
                                 </div>
                             </div>
-                            <div class="mt-3 d-flex gap-2">
-                                <button type="button" class="btn btn-secondary" @click="showChangePassword = false">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Update Password</button>
+                                </div>
+                                <div class="mt-4 pt-4 border-top d-flex flex-wrap gap-3">
+                                    <button type="button" class="btn btn-outline-secondary px-5 py-2" style="border-radius: 25px;" @click="showChangePassword = false">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </button>
+                                    <button type="submit" class="btn btn-primary px-5 py-2 shadow-sm" style="border-radius: 25px;">
+                                        <i class="fas fa-save me-2"></i>Update Password
+                                    </button>
                             </div>
                         </form>
                     </div>
                 </div>
-                <div x-show="section==='notifications'" class="bg-white rounded border p-4 mt-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">Notifications</h6>
-                        <button class="btn btn-sm btn-outline-primary" @click="markAllAsRead()" x-show="unreadCount > 0">
-                            <i class="fas fa-check-double me-1"></i>Mark All as Read
+                </div>
+                </div>
+                <!-- Notifications Section -->
+                <div x-show="section==='notifications'" class="mt-4 px-3 px-md-4" 
+                     x-transition:enter="transition ease-out duration-300" 
+                     x-transition:enter-start="opacity-0 transform translate-y-4" 
+                     x-transition:enter-end="opacity-100 transform translate-y-0">
+                    <!-- Modern Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="h4 fw-bold mb-1 neon-text d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-bell text-primary"></i>
+                                </div>
+                                <span>Notifications</span>
+                                <span x-show="unreadCount > 0" class="badge bg-danger rounded-pill animate-pulse" x-text="unreadCount" style="font-size: 0.7rem; padding: 4px 8px;"></span>
+                            </h2>
+                            <p class="text-muted small mb-0">Stay updated with your job assignments and important updates</p>
+                        </div>
+                        <button class="btn btn-outline-primary px-4 py-2" style="border-radius: 25px;" @click="markAllAsRead()" x-show="unreadCount > 0">
+                            <i class="fas fa-check-double me-2"></i>Mark All as Read
                         </button>
                     </div>
-                    <div x-show="notifications.length === 0" class="text-center py-5 text-muted">
-                        <i class="fas fa-bell-slash fa-3x mb-3 opacity-50"></i>
-                        <p>No notifications yet</p>
+                    
+                    <!-- Empty State -->
+                    <div x-show="notifications.length === 0" class="card border-0 shadow-lg">
+                        <div class="card-body text-center py-5">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px;">
+                                <i class="fas fa-bell-slash fa-3x text-muted opacity-50"></i>
                     </div>
-                    <div class="list-group">
-                        <template x-for="notif in notifications" :key="notif.id">
-                            <div class="list-group-item list-group-item-action" 
-                                 :class="{'bg-light': !notif.is_read}"
-                                 style="cursor: pointer;"
-                                 @click="handleNotification(notif)">
-                                <div class="d-flex justify-content-between align-items-start">
+                            <h5 class="fw-bold text-dark mb-2">No Notifications</h5>
+                            <p class="text-muted mb-0">You're all caught up! New notifications will appear here.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Notifications List -->
+                    <div x-show="notifications.length > 0" class="space-y-3">
+                        <template x-for="(notif, index) in notifications" :key="notif.id">
+                            <div class="card border-0 shadow-sm modern-notification-card" 
+                                 :class="{'border-start border-primary border-4': !notif.is_read, 'opacity-75': notif.is_read}"
+                                 style="cursor: pointer; transition: all 0.3s ease;"
+                                 @click="handleNotification(notif)"
+                                 x-transition:enter="transition ease-out duration-300"
+                                 x-transition:enter-start="opacity-0 transform translate-x-4"
+                                 x-transition:enter-end="opacity-100 transform translate-x-0"
+                                 :style="'transition-delay: ' + (index * 0.05) + 's'">
+                                <div class="card-body p-4">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <!-- Notification Icon -->
+                                        <div class="flex-shrink-0">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center" 
+                                                 :class="notif.is_read ? 'bg-light' : 'bg-primary bg-opacity-10'"
+                                                 style="width: 48px; height: 48px;">
+                                                <i class="fas" 
+                                                   :class="{
+                                                       'fa-briefcase text-primary': notif.type === 'technician_assigned' || notif.type === 'new_job',
+                                                       'fa-check-circle text-success': notif.type === 'booking_completed' || notif.type === 'job_completed',
+                                                       'fa-spinner text-info': notif.type === 'job_in_progress',
+                                                       'fa-calendar-check text-warning': notif.type === 'schedule_reminder',
+                                                       'fa-bell text-primary': true
+                                                   }"
+                                                   style="font-size: 1.2rem;"></i>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Notification Content -->
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
                                     <div class="flex-grow-1">
                                         <div class="d-flex align-items-center gap-2 mb-1">
-                                            <strong x-text="notif.title"></strong>
-                                            <span x-show="!notif.is_read" class="badge bg-primary" style="font-size: 0.65rem;">New</span>
+                                                        <h6 class="fw-bold mb-0 text-dark" x-text="notif.title"></h6>
+                                                        <span x-show="!notif.is_read" class="badge bg-primary rounded-pill animate-pulse" style="font-size: 0.65rem; padding: 2px 8px;">New</span>
                                         </div>
-                                        <p class="mb-1 small" x-text="notif.message"></p>
+                                                    <p class="mb-2 text-muted small" x-text="notif.message"></p>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="fas fa-clock text-muted" style="font-size: 0.75rem;"></i>
                                         <small class="text-muted" x-text="formatTime(notif.created_at)"></small>
                                     </div>
-                                    <button class="btn btn-sm btn-link text-danger" 
+                                                </div>
+                                                
+                                                <!-- Delete Button -->
+                                                <button class="btn btn-sm btn-link text-danger p-1 flex-shrink-0" 
                                             @click.stop="deleteNotification(notif.id)"
-                                            title="Delete notification">
+                                                        style="opacity: 0.6; transition: all 0.2s ease;"
+                                                        onmouseover="this.style.opacity='1'; this.style.transform='scale(1.2)'"
+                                                        onmouseout="this.style.opacity='0.6'; this.style.transform='scale(1)'">
                                         <i class="fas fa-times"></i>
                                     </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </template>
                     </div>
                 </div>
-                <div x-show="section==='schedule'" class="glass-advanced rounded border p-4 mt-4">
+                <!-- Schedule Section -->
+                <div x-show="section==='schedule'" class="glass-advanced rounded border p-4 mt-4" 
+                     x-transition:enter="transition ease-out duration-300" 
+                     x-transition:enter-start="opacity-0 transform translate-y-4" 
+                     x-transition:enter-end="opacity-100 transform translate-y-0">
+                    <!-- Modern Header -->
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h6 class="m-0 neon-text">My Schedule</h6>
-                            <small class="text-muted">View your weekly job assignments</small>
+                            <h2 class="h4 fw-bold mb-1 neon-text d-flex align-items-center gap-2">
+                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-calendar-week text-primary"></i>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="btn-group btn-group-sm me-2">
-                                <button type="button" class="btn btn-outline-primary" @click="changeWeek(-1)">
+                                <span>My Schedule</span>
+                            </h2>
+                            <p class="text-muted small mb-0">View your weekly job assignments</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-primary px-3" @click="changeWeek(-1)" style="border-radius: 25px 0 0 25px;">
                                     <i class="fas fa-chevron-left me-1"></i>Previous
                                 </button>
-                                <button type="button" class="btn btn-primary" @click="changeWeek(0)">
+                                <button type="button" class="btn btn-primary px-4" @click="changeWeek(0)" style="border-radius: 0;">
                                     <i class="fas fa-calendar-week me-1"></i>This Week
                                 </button>
-                                <button type="button" class="btn btn-outline-primary" @click="changeWeek(1)">
+                                <button type="button" class="btn btn-outline-primary px-3" @click="changeWeek(1)" style="border-radius: 0 25px 25px 0;">
                                     Next<i class="fas fa-chevron-right ms-1"></i>
                                 </button>
                             </div>
-                            <div class="badge bg-info fs-6" x-text="weekRange"></div>
+                            <div class="badge bg-primary px-4 py-2 fs-6 shadow-sm" x-text="weekRange" style="border-radius: 20px;"></div>
                         </div>
                     </div>
-                    <div id="schedule-grid" class="row g-3"></div>
+                    <div id="schedule-grid" class="row g-4"></div>
                 </div>
                 <div x-show="section==='completed'" class="glass-advanced rounded border p-4 mt-4">
                     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -698,6 +1287,7 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
             notifications: [],
             unreadCount: 0,
             completedJobsCount: 0,
+            reviewsData: null,
             profile:{ name: <?php echo json_encode($user['name']); ?>, email: <?php echo json_encode($user['email']); ?>, phone: <?php echo json_encode($user['phone'] ?? ''); ?>, password:'' },
             avatarUrl: <?php 
                 $avatarUrl = $user['avatar_url'] ?: ('https://ui-avatars.com/api/?name=' . urlencode($user['name']) . '&background=4f46e5&color=fff');
@@ -719,6 +1309,7 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                 await this.loadWebsiteLogo(); // Load admin's website logo for favicon
                 this.loadJobs();
                 this.loadNotifications();
+                this.loadReviews(); // Load reviews on init
                 this.startPolling();
             },
             startPolling(){
@@ -1075,31 +1666,85 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                     }
                 }
             },
+            loadStats(){
+                this.renderStats();
+                this.loadReviews(); // Also load reviews to show rating on home
+            },
             renderStats(){
                 const jobs = Array.isArray(this.jobs) ? this.jobs : [];
                 const total = jobs.length;
                 const completed = jobs.filter(j=>j.status==='completed').length;
                 const inprog = jobs.filter(j=>j.status==='in_progress').length;
                 const pending = jobs.filter(j=>['pending','approved','assigned'].includes(j.status)).length;
-                const earnings = jobs.filter(j=>j.status==='completed').reduce((s,j)=> s + Number(j.price||0), 0);
-                const fmt = n=> Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
                 const set = (id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val; };
                 set('st-total', total);
                 set('st-completed', completed);
                 set('st-inprog', inprog);
                 set('st-pending', pending);
-                set('st-earnings', fmt(earnings));
                 this.completedJobsCount = completed;
 
                 // Calculate performance metrics
                 const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
-                const avgEarnings = completed > 0 ? Math.round(earnings / completed) : 0;
                 set('st-completion-rate', completionRate + '%');
-                set('st-avg-earnings', '₱' + avgEarnings.toLocaleString());
 
                 // Render charts
                 this.renderCharts(jobs, completed, inprog, pending);
                 this.renderRecentActivity(jobs);
+            },
+            async loadReviews(){
+                try {
+                    const res = await fetch('../../backend/api/technician/reviews.php', {
+                        credentials: 'include'
+                    });
+                    const data = await res.json();
+                    if(data.success && data.data) {
+                        this.reviewsData = data.data;
+                        
+                        // Update rating display on home page
+                        if(this.reviewsData.rating) {
+                            const avgRating = this.reviewsData.rating.average_rating || 0;
+                            const totalReviews = this.reviewsData.rating.total_reviews || 0;
+                            
+                            const ratingEl = document.getElementById('tech-average-rating');
+                            const starsEl = document.getElementById('tech-rating-stars');
+                            const reviewsEl = document.getElementById('tech-total-reviews');
+                            
+                            if(ratingEl) ratingEl.textContent = avgRating.toFixed(1);
+                            if(reviewsEl) reviewsEl.textContent = totalReviews;
+                            
+                            if(starsEl) {
+                                let starsHtml = '';
+                                const fullStars = Math.round(avgRating);
+                                for(let i = 1; i <= 5; i++) {
+                                    if(i <= fullStars) {
+                                        starsHtml += '<i class="fas fa-star text-warning"></i>';
+                                    } else {
+                                        starsHtml += '<i class="far fa-star text-muted"></i>';
+                                    }
+                                }
+                                starsEl.innerHTML = starsHtml;
+                            }
+                        }
+                    } else {
+                        console.error('Failed to load reviews:', data.error);
+                    }
+                } catch(e) {
+                    console.error('Error loading reviews:', e);
+                }
+            },
+            formatDate(dateString){
+                if(!dateString) return '';
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffMs = now - date;
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                
+                if(diffDays === 0) return 'Today';
+                if(diffDays === 1) return 'Yesterday';
+                if(diffDays < 7) return diffDays + ' days ago';
+                if(diffDays < 30) return Math.floor(diffDays / 7) + ' weeks ago';
+                if(diffDays < 365) return Math.floor(diffDays / 30) + ' months ago';
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             },
             renderCharts(jobs, completed, inprog, pending){
                 try {
@@ -1322,7 +1967,6 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                     div.style.border = '1px solid rgba(34, 197, 94, 0.2)';
                     div.style.transition = 'all 0.3s ease';
                     
-                    const mapUrl = j.shop_address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.shop_address)}` : '';
                     const phoneHref = j.customer_phone ? `tel:${encodeURIComponent(j.customer_phone)}` : '';
                     const mailHref = j.customer_email ? `mailto:${encodeURIComponent(j.customer_email)}` : '';
                     
@@ -1378,11 +2022,6 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                                 ` : ''}
                                 
                                 <div class="d-flex gap-2 flex-wrap">
-                                    ${mapUrl ? `
-                                        <a class="btn btn-outline-primary btn-sm" href="${mapUrl}" target="_blank">
-                                            <i class="fas fa-map-marker-alt me-1"></i>Open in Maps
-                                        </a>
-                                    ` : ''}
                                     ${phoneHref ? `
                                         <a class="btn btn-outline-success btn-sm" href="${phoneHref}">
                                             <i class="fas fa-phone me-1"></i>Call Customer
@@ -1394,12 +2033,6 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                                         </a>
                                     ` : ''}
                                 </div>
-                            </div>
-                            <div class="text-end ms-3">
-                                <div class="fw-bold text-success fs-4">
-                                    ${j.price ? `₱${Number(j.price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '—'}
-                                </div>
-                                <div class="small text-muted">Earnings</div>
                             </div>
                         </div>
                     `;
@@ -1479,62 +2112,89 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                         const statusIcon = statusIcons[j.status] || 'fa-briefcase';
                         
                         return `
-                            <div class="glass-advanced rounded border p-3 mb-2 job-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)); border: 1px solid rgba(99, 102, 241, 0.2);">
+                            <div class="card border-0 shadow-sm mb-3 job-card" style="background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.9)); border-left: 3px solid ${statusClass.includes('primary') ? '#6366f1' : statusClass.includes('success') ? '#22c55e' : statusClass.includes('warning') ? '#eab308' : statusClass.includes('info') ? '#3b82f6' : '#6b7280'} !important; transition: all 0.3s ease;">
+                                <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <div class="small text-muted">
-                                        <i class="fas fa-clock me-1"></i>${j.time_slot || '—'}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-clock text-muted" style="font-size: 0.85rem;"></i>
+                                            <span class="small text-muted fw-semibold">${j.time_slot || '—'}</span>
                                     </div>
-                                    <span class="badge ${statusClass}">
+                                        <span class="badge ${statusClass} shadow-sm" style="border-radius: 12px;">
                                         <i class="fas ${statusIcon} me-1"></i>${j.status}
                                     </span>
                                 </div>
-                                <div class="fw-semibold mb-1">${j.service}</div>
+                                    <div class="fw-bold mb-2 text-dark" style="font-size: 0.95rem;">${j.service}</div>
                                 ${j.device_type ? `
-                                    <div class="small text-muted mb-1">
-                                        <i class="fas fa-mobile-alt me-1"></i>${j.device_type}
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <i class="fas fa-mobile-alt text-muted" style="font-size: 0.75rem;"></i>
+                                            <span class="small text-muted">${j.device_type}</span>
                                     </div>
                                 ` : ''}
                                 ${j.shop_name ? `
-                                    <div class="small text-muted">
-                                        <i class="fas fa-store me-1"></i>${j.shop_name}
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <i class="fas fa-store text-muted" style="font-size: 0.75rem;"></i>
+                                            <span class="small text-muted">${j.shop_name}</span>
                                     </div>
                                 ` : ''}
                                 ${j.customer_name ? `
-                                    <div class="small text-muted">
-                                        <i class="fas fa-user me-1"></i>${j.customer_name}
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <i class="fas fa-user text-muted" style="font-size: 0.75rem;"></i>
+                                            <span class="small text-muted">${j.customer_name}</span>
                                     </div>
                                 ` : ''}
                                 ${j.price ? `
-                                    <div class="small text-success fw-bold mt-1">
-                                        <i class="fas fa-dollar-sign me-1"></i>₱${Number(j.price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                                        <div class="d-flex align-items-center gap-1 mt-2 pt-2 border-top">
+                                            <i class="fas fa-dollar-sign text-success" style="font-size: 0.75rem;"></i>
+                                            <span class="small text-success fw-bold">₱${Number(j.price).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                                     </div>
                                 ` : ''}
+                                </div>
                             </div>
                         `;
                     }).join('');
                     
-                    // Create day card with enhanced styling
-                    const dayCardClass = isToday ? 'border-primary bg-primary bg-opacity-10' : isWeekend ? 'border-warning bg-warning bg-opacity-5' : 'border-light';
-                    const dayHeaderClass = isToday ? 'text-primary fw-bold' : isWeekend ? 'text-warning' : 'text-dark';
+                    // Create day card with enhanced modern styling
+                    const dayCardClass = isToday 
+                        ? 'border-primary border-2 shadow-lg' 
+                        : isWeekend 
+                            ? 'border-warning border-2' 
+                            : 'border border-2';
+                    const dayCardBg = isToday 
+                        ? 'background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.03) 100%);' 
+                        : isWeekend 
+                            ? 'background: linear-gradient(135deg, rgba(234,179,8,0.05) 0%, rgba(234,179,8,0.02) 100%);' 
+                            : 'background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%);';
+                    const dayHeaderClass = isToday ? 'text-primary fw-bold' : isWeekend ? 'text-warning fw-semibold' : 'text-dark fw-semibold';
                     
                     col.innerHTML = `
-                        <div class="border rounded p-3 h-100 schedule-day-card ${dayCardClass}">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="card border-0 shadow-sm h-100 schedule-day-card ${dayCardClass}" style="${dayCardBg} transition: all 0.3s ease;">
+                            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-3">
+                                <div class="d-flex justify-content-between align-items-center">
                                 <div class="${dayHeaderClass}">
-                                    <div class="fw-bold">${pretty}</div>
-                                    ${isToday ? '<small class="text-primary">Today</small>' : ''}
+                                        <div class="d-flex align-items-center gap-2">
+                                            <i class="fas fa-calendar-day ${isToday ? 'text-primary' : isWeekend ? 'text-warning' : 'text-muted'}" style="font-size: 1.1rem;"></i>
+                                            <div>
+                                                <div class="fw-bold fs-6">${pretty}</div>
+                                                ${isToday ? '<span class="badge bg-primary rounded-pill mt-1" style="font-size: 0.65rem;">Today</span>' : ''}
                                 </div>
-                                <div class="badge bg-light text-dark">
-                                    ${dayJobs.length} job${dayJobs.length !== 1 ? 's' : ''}
                                 </div>
                             </div>
+                                    <div class="badge ${isToday ? 'bg-primary' : isWeekend ? 'bg-warning text-dark' : 'bg-light text-dark'} px-3 py-1 shadow-sm" style="border-radius: 15px;">
+                                        <i class="fas fa-briefcase me-1"></i>${dayJobs.length} job${dayJobs.length !== 1 ? 's' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body px-4 pb-4">
                             <div class="schedule-jobs">
                                 ${items || `
-                                    <div class="text-center py-4 text-muted">
-                                        <i class="fas fa-calendar-times fa-2x mb-2 opacity-50"></i>
-                                        <div class="small">No jobs scheduled</div>
+                                        <div class="text-center py-5">
+                                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                                                <i class="fas fa-calendar-times fa-2x text-muted opacity-50"></i>
+                                            </div>
+                                            <div class="text-muted small fw-semibold">No jobs scheduled</div>
                                     </div>
                                 `}
+                                </div>
                             </div>
                         </div>
                     `;
@@ -1629,7 +2289,6 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                         'cancelled': 'fa-times'
                     };
                     
-                    const mapUrl = j.shop_address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.shop_address)}` : '';
                     const phoneHref = j.customer_phone ? `tel:${encodeURIComponent(j.customer_phone)}` : '';
                     const mailHref = j.customer_email ? `mailto:${encodeURIComponent(j.customer_email)}` : '';
                     
@@ -1690,11 +2349,6 @@ if ($avatarUrl && !str_starts_with($avatarUrl, 'http') && !str_starts_with($avat
                                 ` : ''}
                                 
                                 <div class="d-flex gap-2 flex-wrap">
-                                    ${mapUrl ? `
-                                        <a class="btn btn-outline-primary btn-sm" href="${mapUrl}" target="_blank">
-                                            <i class="fas fa-map-marker-alt me-1"></i>Open in Maps
-                                        </a>
-                                    ` : ''}
                                     ${phoneHref ? `
                                         <a class="btn btn-outline-success btn-sm" href="${phoneHref}">
                                             <i class="fas fa-phone me-1"></i>Call Customer
