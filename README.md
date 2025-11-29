@@ -115,16 +115,9 @@ repair-booking-platform/
 │   ├── technician/            # Technician dashboard
 │   └── assets/                # CSS, JS, and images
 ├── android/                    # Android Mobile App (Optional)
-├── docs/                       # 📚 All Documentation
-│   ├── README.md              # Documentation index
-│   ├── SYSTEM_OVERVIEW.md    # System overview
-│   ├── WEB_SYSTEM_ARCHITECTURE.md # Complete web architecture
-│   ├── DATABASE_SCHEMA_DESCRIPTION.md # Database schema
-│   ├── TECHNOLOGY_STACK.md    # Technology stack
-│   ├── backend/               # Backend documentation
-│   └── android/               # Android documentation
-├── vendor/                    # PHPMailer dependencies
-└── README.md                  # This file
+├── vendor/                     # PHPMailer dependencies
+├── README.md                   # This file
+└── DOCUMENTATION.md            # 📚 Complete Documentation
 ```
 
 ## Key Features
@@ -177,25 +170,18 @@ This project is open source and available under the MIT License.
 
 ## Documentation
 
-📚 **All documentation is now organized in the [`docs/`](docs/) folder.**
+📚 **Complete documentation is available in [DOCUMENTATION.md](DOCUMENTATION.md)**
 
-### Quick Links
-- **[📖 Documentation Index](docs/README.md)** - Complete documentation index and quick links
-- **[🌐 System Overview](docs/SYSTEM_OVERVIEW.md)** - Complete system architecture overview
-- **[🏗️ Web System Architecture](docs/WEB_SYSTEM_ARCHITECTURE.md)** - Full web platform architecture (frontend + backend)
-
-### Backend Documentation
-- **[Backend Architecture](docs/backend/ARCHITECTURE.md)** - Complete backend architecture, API design, security, and best practices
-
-### Android App Documentation
-- **[Android Architecture](docs/android/ARCHITECTURE.md)** - Android app architecture, components, and implementation details
-- **[API Integration Guide](docs/android/API_INTEGRATION.md)** - Detailed guide for integrating with the backend API
-- **[Android README](docs/android/README.md)** - Android app setup, configuration, and development guide
-- **[Free Services Guide](docs/android/FREE_SERVICES_GUIDE.md)** - Building Android app without paid APIs
-
-### Additional Documentation
-- **[Database Schema](docs/DATABASE_SCHEMA_DESCRIPTION.md)** - Complete database schema documentation
-- **[Technology Stack](docs/TECHNOLOGY_STACK.md)** - Comprehensive technology stack overview
+This comprehensive guide includes:
+- System architecture and overview
+- Technology stack details
+- Backend and frontend architecture
+- Database schema (16 tables)
+- API documentation
+- Android app architecture
+- Security implementation
+- Deployment guide
+- Installation and setup instructions
 
 ## Mobile App
 
@@ -212,10 +198,10 @@ The ERepair platform includes a native Android mobile application built with Kot
 - 📴 Offline support with sync
 
 ### Getting Started with Android App
-1. See [Android README](docs/android/README.md) for setup instructions
+1. See [DOCUMENTATION.md](DOCUMENTATION.md#android-app) for Android setup instructions
 2. Configure API base URL in `ApiClient.kt`
 3. Build and run the app in Android Studio
-4. **✅ 100% FREE**: See [Free Services Guide](docs/android/FREE_SERVICES_GUIDE.md) - No paid APIs needed!
+4. **✅ 100% FREE**: All services are free - no paid APIs needed!
 
 ## Support
 
