@@ -203,6 +203,37 @@ The ERepair platform includes a native Android mobile application built with Kot
 3. Build and run the app in Android Studio
 4. **✅ 100% FREE**: All services are free - no paid APIs needed!
 
+## Collaboration
+
+### For Team Members / Partners
+
+To clone and work on this project:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/aceaffff/erepair-booking-platform.git
+   cd erepair-booking-platform
+   ```
+
+2. **Open in Cursor:**
+   - Open Cursor IDE
+   - File → Open Folder
+   - Select the `erepair-booking-platform` folder
+   - Or use command line: `cursor erepair-booking-platform`
+
+3. **Set up the project:**
+   - Install dependencies: `composer install` (for PHP)
+   - Install Node modules: `npm install` (for Tailwind CSS)
+   - Configure database in `backend/config/database.php`
+   - Run setup: `http://localhost/ERepair/repair-booking-platform/backend/setup.php`
+
+4. **Start development:**
+   - Start XAMPP/WAMP (Apache + MySQL)
+   - Access: `http://localhost/ERepair/repair-booking-platform/frontend/index.html`
+
+### Repository URL
+**https://github.com/aceaffff/erepair-booking-platform**
+
 ## Support
 
 For support and questions, please contact the development team or create an issue in the project repository.
