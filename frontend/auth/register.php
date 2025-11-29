@@ -541,10 +541,51 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                         </div>
                     </div>
 
+                    <!-- Selfie with ID Upload -->
+                    <div>
+                        <label for="shop-owner-selfie-file" class="block text-sm font-medium text-gray-700">
+                            Selfie with ID <span class="text-red-500">*</span>
+                        </label>
+                        <div class="mt-1">
+                            <button type="button" 
+                                    @click="openCameraForSelfie()"
+                                    class="w-full px-4 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 flex items-center justify-center gap-2">
+                                <i class="fas fa-camera"></i>
+                                <span>Take Selfie with ID</span>
+                            </button>
+                            <input 
+                                type="file" 
+                                id="shop-owner-selfie-file" 
+                                name="selfie_file" 
+                                accept="image/*"
+                                capture="user"
+                                required
+                                @change="handleFileSelect($event, 'selfie_file')"
+                                class="hidden"
+                                style="display: none !important;"
+                            >
+                            <p class="mt-1 text-xs text-gray-500">Take a selfie holding your ID next to your face using your camera. JPG or PNG only (max 5MB)</p>
+                            <p class="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                                <i class="fas fa-info-circle"></i>
+                                <span>This helps us verify your identity</span>
+                            </p>
+                        </div>
+                        <div x-show="files.selfie_file" class="mt-3">
+                            <div class="border border-gray-300 rounded-md p-2">
+                                <img :src="getFilePreview('selfie_file')" alt="Selfie Preview" class="max-w-full h-auto rounded-md" style="max-height: 200px;">
+                                <button type="button" 
+                                        @click="retakeSelfie()"
+                                        class="mt-2 w-full px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm">
+                                    <i class="fas fa-redo mr-2"></i>Retake Photo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <div>
                         <button 
                             type="submit" 
-                            :disabled="loading"
+                            :disabled="loading || !files.business_permit_file || !files.id_file || !files.selfie_file"
                             class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <span class="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -1045,7 +1086,8 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                 },
                 files: {
                     business_permit_file: null,
-                    id_file: null
+                    id_file: null,
+                    selfie_file: null
                 },
                 showPassword: false,
                 loading: false,
@@ -1313,6 +1355,18 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                 },
 
                 async handleFileSelect(event, fileType) {
+                    // Prevent file selection for selfie - must use camera
+                    if (fileType === 'selfie_file') {
+                        event.preventDefault();
+                        event.target.value = '';
+                        Notiflix.Report.warning(
+                            'Camera Required', 
+                            'You must take a selfie using your camera. File upload is not allowed for selfie verification. Please click "Take Selfie with ID" button to use your camera.', 
+                            'OK'
+                        );
+                        return;
+                    }
+
                     const file = event.target.files[0];
                     if (!file) {
                         return;
@@ -1367,10 +1421,129 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                         this.files[fileType] = null;
                     }
                 },
+                
+                getFilePreview(fileType) {
+                    if (!this.files[fileType]) return '';
+                    return URL.createObjectURL(this.files[fileType]);
+                },
+                
+                async openCameraForSelfie() {
+                    try {
+                        // Check if camera is available
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            Notiflix.Report.failure(
+                                'Camera Not Available', 
+                                'Your browser does not support camera access. Please use a modern browser with camera support (Chrome, Firefox, Safari, Edge).', 
+                                'OK'
+                            );
+                            return;
+                        }
+                        
+                        // Request camera access
+                        const stream = await navigator.mediaDevices.getUserMedia({ 
+                            video: { 
+                                facingMode: 'user', // Front camera
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            } 
+                        });
+                        
+                        // Create camera modal
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75';
+                        modal.innerHTML = `
+                            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                                <h3 class="text-lg font-semibold mb-2">Take Selfie with ID</h3>
+                                <p class="text-sm text-gray-600 mb-4">Hold your ID next to your face. Make sure both are clearly visible in the frame.</p>
+                                <div class="relative mb-4 bg-black rounded-lg overflow-hidden">
+                                    <video id="camera-preview" autoplay playsinline class="w-full" style="max-height: 400px; display: block;"></video>
+                                    <canvas id="camera-canvas" class="hidden"></canvas>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button id="capture-btn" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2">
+                                        <i class="fas fa-camera"></i>
+                                        <span>Capture Photo</span>
+                                    </button>
+                                    <button id="cancel-camera-btn" class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        document.body.appendChild(modal);
+                        const video = modal.querySelector('#camera-preview');
+                        const canvas = modal.querySelector('#camera-canvas');
+                        const captureBtn = modal.querySelector('#capture-btn');
+                        const cancelBtn = modal.querySelector('#cancel-camera-btn');
+                        
+                        video.srcObject = stream;
+                        
+                        // Capture photo
+                        captureBtn.onclick = () => {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(video, 0, 0);
+                            
+                            // Stop camera stream
+                            stream.getTracks().forEach(track => track.stop());
+                            
+                            // Convert canvas to blob
+                            canvas.toBlob((blob) => {
+                                // Create a File object from the blob
+                                const file = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+                                this.files.selfie_file = file;
+                                
+                                // Update the hidden input (for form submission)
+                                const input = document.getElementById('shop-owner-selfie-file');
+                                if (input) {
+                                    const dataTransfer = new DataTransfer();
+                                    dataTransfer.items.add(file);
+                                    input.files = dataTransfer.files;
+                                }
+                                
+                                // Remove modal
+                                document.body.removeChild(modal);
+                                
+                                Notiflix.Notify.success('Photo captured successfully!', {
+                                    timeout: 2000
+                                });
+                            }, 'image/jpeg', 0.9);
+                        };
+                        
+                        // Cancel camera
+                        cancelBtn.onclick = () => {
+                            stream.getTracks().forEach(track => track.stop());
+                            document.body.removeChild(modal);
+                        };
+                        
+                    } catch (error) {
+                        console.error('Camera error:', error);
+                        Notiflix.Report.failure(
+                            'Camera Access Denied', 
+                            'Please allow camera access to take a selfie. Check your browser permissions and try again.', 
+                            'OK'
+                        );
+                    }
+                },
+                
+                retakeSelfie() {
+                    this.files.selfie_file = null;
+                    // Revoke preview URL to free memory
+                    if (this.files.selfie_file) {
+                        const preview = URL.createObjectURL(this.files.selfie_file);
+                        URL.revokeObjectURL(preview);
+                    }
+                    const input = document.getElementById('shop-owner-selfie-file');
+                    if (input) {
+                        input.value = '';
+                    }
+                },
 
                 async handleShopOwnerRegister() {
-                    if (!this.files.business_permit_file || !this.files.id_file) {
-                        Notiflix.Report.failure('Missing Files', 'Please upload both business permit and ID document', 'OK');
+                    if (!this.files.business_permit_file || !this.files.id_file || !this.files.selfie_file) {
+                        Notiflix.Report.failure('Missing Files', 'Please upload business permit, ID document, and selfie with ID', 'OK');
                         return;
                     }
 
@@ -1387,6 +1560,7 @@ $faviconUrl = getWebsiteLogo('../../backend/');
                         // Add files
                         formData.append('business_permit_file', this.files.business_permit_file);
                         formData.append('id_file', this.files.id_file);
+                        formData.append('selfie_file', this.files.selfie_file);
 
                     const response = await fetch('../backend/api/register-shop-owner.php', {
                             method: 'POST',

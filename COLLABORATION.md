@@ -42,7 +42,7 @@ npm install
 1. Edit `backend/config/database.php`:
    ```php
    private $host = 'localhost';
-   private $db_name = 'erepair_db';  // or your database name
+   private $db_name = 'repair_booking';  // or your database name
    private $username = 'root';
    private $password = '';  // your MySQL password
    ```
